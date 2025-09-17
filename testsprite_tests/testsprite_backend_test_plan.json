@@ -1,0 +1,52 @@
+[
+  {
+    "id": "TC001",
+    "title": "test user authentication and role based access control",
+    "description": "Verify that the user authentication system correctly authenticates users and enforces role-based access control to prevent unauthorized data access."
+  },
+  {
+    "id": "TC002",
+    "title": "test natural language query processing in portuguese",
+    "description": "Test the system's ability to accurately process and respond to natural language queries in Portuguese, ensuring at least 95% accuracy in responses."
+  },
+  {
+    "id": "TC003",
+    "title": "test real time data querying from sql server",
+    "description": "Validate that the API correctly queries real-time business data from the SQL Server and returns accurate results."
+  },
+  {
+    "id": "TC004",
+    "title": "test dynamic data visualization generation",
+    "description": "Ensure that the API generates dynamic visualizations such as charts and tables correctly based on user queries and supports interactive features like filtering and sorting."
+  },
+  {
+    "id": "TC005",
+    "title": "test secure session management",
+    "description": "Check that user sessions are securely managed, including session creation, expiration, and protection against unauthorized access."
+  },
+  {
+    "id": "TC006",
+    "title": "test administrator monitoring and management interfaces",
+    "description": "Verify that administrator APIs provide access to monitoring dashboards, pipeline health status, and user and role management functionalities."
+  },
+  {
+    "id": "TC007",
+    "title": "test logging and error tracking system",
+    "description": "Ensure that the logging API captures all critical events and errors accurately and provides comprehensive audit trails."
+  },
+  {
+    "id": "TC008",
+    "title": "test backend api query processing",
+    "description": "Validate that the backend API correctly processes user queries, integrates with LangGraph and OpenAI models, and returns appropriate responses."
+  },
+  {
+    "id": "TC009",
+    "title": "test data pipeline status and update api",
+    "description": "Test the API responsible for monitoring and updating the data pipeline status, ensuring data is correctly extracted, transformed, and loaded."
+  },
+  {
+    "id": "TC010",
+    "title": "test system performance and scalability under load",
+    "description": "Assess the API's ability to maintain performance and availability under increased user load and data volume, meeting the specified uptime and response time criteria."
+  }
+]
