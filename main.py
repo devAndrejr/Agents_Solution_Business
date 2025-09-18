@@ -38,7 +38,7 @@ def startup_event():
     """Inicializa as dependências na inicialização da aplicação."""
     logger.info("Inicializando dependências...")
     app.state.llm_adapter = OpenAILLMAdapter(api_key=settings.OPENAI_API_KEY.get_secret_value())
-    app.state.parquet_adapter = ParquetAdapter(file_path="C:\\Users\\André\\Documents\\Agent_BI\\data\\parquet\\admatao.parquet") # CORRECTED INSTANTIATION
+    app.state.parquet_adapter = ParquetAdapter(file_path="data/parquet/admatao.parquet") # CLOUD-COMPATIBLE PATH
     app.state.code_gen_agent = CodeGenAgent(llm_adapter=app.state.llm_adapter)
     graph_builder = GraphBuilder(
         llm_adapter=app.state.llm_adapter,

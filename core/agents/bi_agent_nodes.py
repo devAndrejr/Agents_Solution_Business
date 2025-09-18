@@ -123,7 +123,7 @@ def generate_parquet_query(state: AgentState, llm_adapter: BaseLLMAdapter, parqu
         return {"parquet_filters": {}, "final_response": {"type": "error", "content": "Não foi possível aceder ao schema do arquivo Parquet para gerar a consulta."}}
 
     # Load the cleaned catalog
-    catalog_file_path = "C:\\Users\\André\\Documents\\Agent_BI\\data\\catalog_cleaned.json"
+    catalog_file_path = "data/catalog_cleaned.json"
     try:
         with open(catalog_file_path, 'r', encoding='utf-8') as f:
             catalog_data = json.load(f)
