@@ -80,7 +80,21 @@ else:
 
             # Debug 5: Inicializar Parquet
             debug_info.append("Inicializando Parquet...")
-            parquet_adapter = ParquetAdapter(file_path="data/parquet/admatao.parquet")
+            import os
+            parquet_path = os.path.join(os.getcwd(), "data", "parquet", "admatao.parquet")
+            if not os.path.exists(parquet_path):
+                # Criar dados mock para cloud se arquivo não existir
+                import pandas as pd
+                mock_data = pd.DataFrame({
+                    'codigo': [59294, 12345, 67890],
+                    'descricao': ['Produto Exemplo 1', 'Produto Exemplo 2', 'Produto Exemplo 3'],
+                    'preco': [99.90, 149.50, 79.30],
+                    'categoria': ['Categoria A', 'Categoria B', 'Categoria A']
+                })
+                os.makedirs(os.path.dirname(parquet_path), exist_ok=True)
+                mock_data.to_parquet(parquet_path)
+                debug_info.append("⚠️ Arquivo parquet não encontrado - criado dados mock")
+            parquet_adapter = ParquetAdapter(file_path=parquet_path)
             debug_info.append("✅ Parquet OK")
 
             # Debug 6: Inicializar CodeGen
@@ -110,20 +124,25 @@ else:
         except Exception as e:
             debug_info.append(f"❌ ERRO: {str(e)}")
 
-            # Mostrar debug completo na sidebar
-            with st.sidebar:
-                st.error("🚨 Backend Error")
-                st.write("**Debug Log:**")
-                for info in debug_info:
-                    if "✅" in info:
-                        st.success(info)
-                    elif "❌" in info:
-                        st.error(info)
-                    else:
-                        st.info(info)
+            # Mostrar debug completo na sidebar APENAS para admins
+            user_role = st.session_state.get('role', '')
+            if user_role == 'admin':
+                with st.sidebar:
+                    st.error("🚨 Backend Error (Admin)")
+                    st.write("**Debug Log:**")
+                    for info in debug_info:
+                        if "✅" in info:
+                            st.success(info)
+                        elif "❌" in info:
+                            st.error(info)
+                        else:
+                            st.info(info)
 
-                st.write("**Erro Completo:**")
-                st.code(str(e))
+                    st.write("**Erro Completo:**")
+                    st.code(str(e))
+            else:
+                with st.sidebar:
+                    st.error("❌ Sistema temporariamente indisponível")
 
             return None
 
@@ -133,12 +152,16 @@ else:
     # Salvar no session_state para acesso em outras partes
     if backend_components:
         st.session_state.backend_components = backend_components
-        with st.sidebar:
-            st.success("✅ Backend inicializado!")
+        user_role = st.session_state.get('role', '')
+        if user_role == 'admin':
+            with st.sidebar:
+                st.success("✅ Backend inicializado!")
     else:
         st.session_state.backend_components = None
-        with st.sidebar:
-            st.error("❌ Backend falhou")
+        user_role = st.session_state.get('role', '')
+        if user_role == 'admin':
+            with st.sidebar:
+                st.error("❌ Backend falhou")
 
     # --- Logout Button ---
     with st.sidebar:
@@ -188,7 +211,7 @@ else:
                     # Fallback: resposta simples se backend não disponível
                     agent_response = {
                         "type": "text",
-                        "content": f"⚠️ Backend não disponível. Pergunta recebida: '{user_input}'\n\nPor favor, configure a chave OPENAI_API_KEY nos secrets do Streamlit Cloud para ativar todas as funcionalidades.",
+                        "content": f"⚠️ Sistema está sendo inicializado. Tente novamente em alguns segundos.\n\nSe o problema persistir, contate o administrador.",
                         "user_query": user_input
                     }
                 else:

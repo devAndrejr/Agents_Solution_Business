@@ -1,0 +1,32 @@
+# Requirements otimizados para Streamlit Cloud
+# Apenas dependências essenciais para o Agent_BI funcionar
+
+# Core AI/LLM
+openai>=1.0.0
+langchain-core>=0.1.0
+langchain-openai>=0.1.0
+langgraph>=0.1.0
+
+# Data Processing
+pandas>=2.0.0
+pyarrow>=12.0.0
+numpy>=1.24.0
+
+# Web Framework
+streamlit>=1.28.0
+
+# Database (opcional - apenas se SQL Server funcionar)
+sqlalchemy>=2.0.0
+pyodbc>=4.0.0
+
+# Utilities
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+
+# Science/ML (apenas essenciais)
+sentence-transformers>=2.0.0
+faiss-cpu>=1.7.0
+plotly>=5.0.0
+
+# Security
+bcrypt>=4.0.0

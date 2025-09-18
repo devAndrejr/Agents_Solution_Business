@@ -45,21 +45,19 @@ else:
 # --- STATUS DOS SERVIÇOS ---
 st.markdown("### Status dos Serviços")
 status_data = []
-# Checagem da API
-api_url = "http://localhost:5000/api/chat"  # ajuste se necessário
-api_status = "-"
-api_time = "-"
+# Checagem do Backend Integrado (não mais API externa)
+backend_status = "-"
+backend_time = "-"
 try:
     start = time.time()
-    resp = requests.post(api_url, json={"message": "ping"}, timeout=3)
-    api_time = f"{(time.time() - start)*1000:.0f} ms"
-    if resp.status_code == 200:
-        api_status = "OK"
+    if 'backend_components' in st.session_state and st.session_state.backend_components:
+        backend_time = f"{(time.time() - start)*1000:.0f} ms"
+        backend_status = "✅ Integrado (LangGraph)"
     else:
-        api_status = f"FALHA ({resp.status_code})"
+        backend_status = "❌ Não inicializado"
 except Exception as e:
-    api_status = f"FALHA ({str(e)[:30]})"
-status_data.append({"Serviço": "API", "Status": api_status, "Tempo": api_time})
+    backend_status = f"FALHA ({str(e)[:30]})"
+status_data.append({"Serviço": "Backend", "Status": backend_status, "Tempo": backend_time})
 # Checagem do Banco de Dados
 db_status = "-"
 db_time = "-"
