@@ -37,40 +37,68 @@ else:
     @st.cache_resource
     def initialize_backend():
         """Inicializa os componentes do backend uma única vez"""
+        debug_info = []
+
+        # Debug 1: Verificar imports
+        debug_info.append(f"BACKEND_AVAILABLE: {BACKEND_AVAILABLE}")
         if not BACKEND_AVAILABLE:
+            with st.sidebar:
+                st.error("❌ Imports do backend falharam")
+                st.write("Componentes não carregados:")
+                st.code("LangGraph, OpenAI, ParquetAdapter, etc.")
             return None
 
         try:
-            # Obter chave da API - priorizar secrets do Streamlit
+            # Debug 2: Verificar secrets
             api_key = None
+            secrets_status = "❌ Falhou"
             try:
-                # Tentar secrets do Streamlit primeiro
                 api_key = st.secrets.get("OPENAI_API_KEY")
-            except:
-                pass
+                if api_key and api_key.startswith("sk-"):
+                    secrets_status = "✅ OK"
+                    debug_info.append(f"Secrets OpenAI: OK ({api_key[:10]}...)")
+                else:
+                    debug_info.append(f"Secrets OpenAI: Inválida")
+            except Exception as e:
+                debug_info.append(f"Secrets erro: {e}")
 
-            # Fallback para settings se disponível
-            if not api_key or api_key.startswith("sk-sua-chave"):
+            # Debug 3: Fallback para settings
+            if not api_key or not api_key.startswith("sk-"):
                 try:
                     api_key = settings.OPENAI_API_KEY.get_secret_value()
-                except:
-                    pass
+                    debug_info.append(f"Settings OpenAI: OK")
+                except Exception as e:
+                    debug_info.append(f"Settings erro: {e}")
 
-            if not api_key or api_key.startswith("sk-sua-chave"):
-                raise ValueError("OPENAI_API_KEY não configurada corretamente")
+            if not api_key or not api_key.startswith("sk-"):
+                raise ValueError("OPENAI_API_KEY não encontrada em secrets nem settings")
 
-            # Inicializar componentes
+            # Debug 4: Inicializar LLM
+            debug_info.append("Inicializando LLM...")
             llm_adapter = OpenAILLMAdapter(api_key=api_key)
-            parquet_adapter = ParquetAdapter(file_path="data/parquet/admatao.parquet")
-            code_gen_agent = CodeGenAgent(llm_adapter=llm_adapter)
+            debug_info.append("✅ LLM OK")
 
-            # Construir grafo
+            # Debug 5: Inicializar Parquet
+            debug_info.append("Inicializando Parquet...")
+            parquet_adapter = ParquetAdapter(file_path="data/parquet/admatao.parquet")
+            debug_info.append("✅ Parquet OK")
+
+            # Debug 6: Inicializar CodeGen
+            debug_info.append("Inicializando CodeGen...")
+            code_gen_agent = CodeGenAgent(llm_adapter=llm_adapter)
+            debug_info.append("✅ CodeGen OK")
+
+            # Debug 7: Construir Grafo
+            debug_info.append("Construindo grafo...")
             graph_builder = GraphBuilder(
                 llm_adapter=llm_adapter,
                 parquet_adapter=parquet_adapter,
                 code_gen_agent=code_gen_agent
             )
             agent_graph = graph_builder.build()
+            debug_info.append("✅ Grafo OK")
+
+            debug_info.append("🎉 Backend inicializado com sucesso!")
 
             return {
                 "llm_adapter": llm_adapter,
@@ -78,24 +106,24 @@ else:
                 "code_gen_agent": code_gen_agent,
                 "agent_graph": agent_graph
             }
-        except Exception as e:
-            error_msg = f"Erro ao inicializar backend: {e}"
-            st.error(error_msg)
 
-            # Debug info na sidebar
+        except Exception as e:
+            debug_info.append(f"❌ ERRO: {str(e)}")
+
+            # Mostrar debug completo na sidebar
             with st.sidebar:
                 st.error("🚨 Backend Error")
-                st.code(str(e))
-
-                # Verificar se chave está disponível
-                try:
-                    test_key = st.secrets.get("OPENAI_API_KEY", "Não configurada")
-                    if test_key.startswith("sk-"):
-                        st.success("✅ Chave OpenAI detectada")
+                st.write("**Debug Log:**")
+                for info in debug_info:
+                    if "✅" in info:
+                        st.success(info)
+                    elif "❌" in info:
+                        st.error(info)
                     else:
-                        st.error("❌ Chave OpenAI inválida")
-                except:
-                    st.error("❌ Secrets não acessíveis")
+                        st.info(info)
+
+                st.write("**Erro Completo:**")
+                st.code(str(e))
 
             return None
 
