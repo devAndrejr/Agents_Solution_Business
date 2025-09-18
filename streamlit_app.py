@@ -41,8 +41,26 @@ else:
             return None
 
         try:
-            # Inicializar componentes (similar ao main.py)
-            llm_adapter = OpenAILLMAdapter(api_key=settings.OPENAI_API_KEY.get_secret_value())
+            # Obter chave da API - priorizar secrets do Streamlit
+            api_key = None
+            try:
+                # Tentar secrets do Streamlit primeiro
+                api_key = st.secrets.get("OPENAI_API_KEY")
+            except:
+                pass
+
+            # Fallback para settings se disponível
+            if not api_key or api_key.startswith("sk-sua-chave"):
+                try:
+                    api_key = settings.OPENAI_API_KEY.get_secret_value()
+                except:
+                    pass
+
+            if not api_key or api_key.startswith("sk-sua-chave"):
+                raise ValueError("OPENAI_API_KEY não configurada corretamente")
+
+            # Inicializar componentes
+            llm_adapter = OpenAILLMAdapter(api_key=api_key)
             parquet_adapter = ParquetAdapter(file_path="data/parquet/admatao.parquet")
             code_gen_agent = CodeGenAgent(llm_adapter=llm_adapter)
 
@@ -61,11 +79,38 @@ else:
                 "agent_graph": agent_graph
             }
         except Exception as e:
-            st.error(f"Erro ao inicializar backend: {e}")
+            error_msg = f"Erro ao inicializar backend: {e}"
+            st.error(error_msg)
+
+            # Debug info na sidebar
+            with st.sidebar:
+                st.error("🚨 Backend Error")
+                st.code(str(e))
+
+                # Verificar se chave está disponível
+                try:
+                    test_key = st.secrets.get("OPENAI_API_KEY", "Não configurada")
+                    if test_key.startswith("sk-"):
+                        st.success("✅ Chave OpenAI detectada")
+                    else:
+                        st.error("❌ Chave OpenAI inválida")
+                except:
+                    st.error("❌ Secrets não acessíveis")
+
             return None
 
     # Inicializar backend
     backend_components = initialize_backend()
+
+    # Salvar no session_state para acesso em outras partes
+    if backend_components:
+        st.session_state.backend_components = backend_components
+        with st.sidebar:
+            st.success("✅ Backend inicializado!")
+    else:
+        st.session_state.backend_components = None
+        with st.sidebar:
+            st.error("❌ Backend falhou")
 
     # --- Logout Button ---
     with st.sidebar:
