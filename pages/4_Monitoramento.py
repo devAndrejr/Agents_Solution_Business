@@ -108,6 +108,35 @@ except Exception as e:
 status_data.append({"Serviço": "LLM (OpenAI)", "Status": llm_status, "Tempo": llm_time})
 st.dataframe(pd.DataFrame(status_data), use_container_width=True)
 
+# --- ECONOMIA DE CRÉDITOS OPENAI ---
+st.markdown("---")
+st.markdown("### 💰 Economia de Créditos OpenAI")
+
+# Tentar acessar estatísticas do cache se backend disponível
+try:
+    if 'backend_components' in st.session_state and st.session_state.backend_components:
+        llm_adapter = st.session_state.backend_components.get("llm_adapter")
+        if llm_adapter and hasattr(llm_adapter, 'get_cache_stats'):
+            cache_stats = llm_adapter.get_cache_stats()
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Cache Ativo", "✅" if cache_stats.get("cache_enabled") else "❌")
+            with col2:
+                st.metric("Respostas Cacheadas", cache_stats.get("total_files", 0))
+            with col3:
+                st.metric("Espaço Cache (MB)", cache_stats.get("total_size_mb", 0))
+
+            st.info(f"💡 **Economia:** Cada hit no cache evita 1 chamada à OpenAI. "
+                   f"TTL: {cache_stats.get('ttl_hours', 48)}h")
+        else:
+            st.info("Cache não disponível - backend não inicializado")
+    else:
+        st.info("📊 Estatísticas de cache disponíveis após primeira consulta")
+
+except Exception as e:
+    st.warning(f"Erro ao acessar estatísticas do cache: {e}")
+
 # --- Função para admins aprovarem redefinição de senha ---
 def painel_aprovacao_redefinicao():
     st.markdown("<h3>Solicitações de Redefinição de Senha</h3>", unsafe_allow_html=True)
