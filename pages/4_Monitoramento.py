@@ -2,10 +2,17 @@ import streamlit as st
 import os
 import time
 import pandas as pd
-import requests
-from sqlalchemy import create_engine
+import logging
 
-from core.database import sql_server_auth_db as auth_db
+# Importação condicional para funcionar no cloud
+try:
+    from sqlalchemy import create_engine
+    from core.database import sql_server_auth_db as auth_db
+    from core.config.settings import settings
+    DB_AVAILABLE = True
+except Exception as e:
+    logging.warning(f"Database components não disponíveis: {e}")
+    DB_AVAILABLE = False
 
 st.markdown("<h1 class='main-header'>Monitoramento do Sistema</h1>", unsafe_allow_html=True)
 st.markdown("<div class='info-box'>Acompanhe os logs do sistema e o status dos principais serviços.</div>", unsafe_allow_html=True)
@@ -56,36 +63,46 @@ status_data.append({"Serviço": "API", "Status": api_status, "Tempo": api_time})
 # Checagem do Banco de Dados
 db_status = "-"
 db_time = "-"
-try:
-    from core.config.config import DB_CONNECTION_STRING
-
-    start = time.time()
-    engine = create_engine(DB_CONNECTION_STRING)
-    with engine.connect() as conn:
-        conn.execute("SELECT 1")
-    db_time = f"{(time.time() - start)*1000:.0f} ms"
-    db_status = "OK"
-except Exception as e:
-    db_status = f"FALHA ({str(e)[:30]})"
+if DB_AVAILABLE:
+    try:
+        start = time.time()
+        engine = create_engine(settings.SQL_SERVER_CONNECTION_STRING)
+        with engine.connect() as conn:
+            conn.execute("SELECT 1")
+        db_time = f"{(time.time() - start)*1000:.0f} ms"
+        db_status = "OK"
+    except Exception as e:
+        db_status = f"FALHA ({str(e)[:30]})"
+else:
+    db_status = "Cloud Mode (SQLite local)"
 status_data.append({"Serviço": "Banco de Dados", "Status": db_status, "Tempo": db_time})
 # Checagem do LLM (OpenAI)
 llm_status = "-"
 llm_time = "-"
 try:
-    import openai
+    from openai import OpenAI
 
-    from core.utils.openai_config import OPENAI_API_KEY
+    # Usar configuração do settings se disponível
+    api_key = None
+    if DB_AVAILABLE:
+        api_key = settings.OPENAI_API_KEY.get_secret_value()
+    else:
+        # Tentar pegar do secrets do Streamlit
+        api_key = st.secrets.get("OPENAI_API_KEY")
 
-    openai.api_key = OPENAI_API_KEY
-    start = time.time()
-    openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": "ping"}],
-        max_tokens=1,
-        request_timeout=3,
-    )
-    llm_time = f"{(time.time() - start)*1000:.0f} ms"
-    llm_status = "OK"
+    if api_key and not api_key.startswith("sk-sua-chave"):
+        client = OpenAI(api_key=api_key)
+        start = time.time()
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": "ping"}],
+            max_tokens=1,
+            timeout=3,
+        )
+        llm_time = f"{(time.time() - start)*1000:.0f} ms"
+        llm_status = "OK"
+    else:
+        llm_status = "Chave API não configurada"
 except Exception as e:
     llm_status = f"FALHA ({str(e)[:30]})"
 status_data.append({"Serviço": "LLM (OpenAI)", "Status": llm_status, "Tempo": llm_time})

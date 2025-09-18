@@ -4,7 +4,7 @@ import json
 import os
 
 # --- Verificação de Autenticação ---
-if st.session_state.get("authentication_status"):
+if st.session_state.get("authenticated"):
     # --- Configuração da Página ---
     st.set_page_config(
         page_title="Área do Comprador - Gestão de Catálogo",
