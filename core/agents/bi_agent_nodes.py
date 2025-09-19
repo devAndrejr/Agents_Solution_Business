@@ -34,16 +34,18 @@ def classify_intent(state: AgentState, llm_adapter: BaseLLMAdapter) -> Dict[str,
     Responda APENAS com um objeto JSON válido contendo as chaves 'intent' e 'entities'.
     Intenções possíveis: 'gerar_grafico', 'consulta_sql_complexa', 'resposta_simples'.
 
-    **ATENÇÃO ESPECIAL PARA ANÁLISES TEMPORAIS:**
+    **ATENÇÃO ESPECIAL PARA ANÁLISES VISUAIS:**
     Se a consulta mencionar:
     - "evolução", "tendência", "ao longo do tempo", "histórico"
     - "últimos X meses", "mensais", "meses"
     - "crescimento", "declínio", "variação temporal"
+    - "TOP", "melhores", "maiores", "principais", "ranking"
+    - "mais vendidos", "menos vendidos", "top 10", "top 5"
+    - "gráfico", "gráficos", "visualização", "mostre"
 
     SEMPRE classifique como 'gerar_grafico' e inclua nas entities:
-    - "temporal": true
-    - "periodo": "mensal" ou "multiplos_meses"
-    - "tipo_analise": "evolucao" ou "tendencia"
+    - Para temporal: "temporal": true, "periodo": "mensal", "tipo_analise": "evolucao"
+    - Para ranking: "ranking": true, "limite": N, "metrica": "vendas"
 
     **Exemplos:**
     - "Gere um gráfico de vendas do produto 369947" → intent: "gerar_grafico", entities: {{"produto": 369947, "metrica": "vendas"}}
@@ -342,7 +344,13 @@ def format_final_response(state: AgentState) -> Dict[str, Any]:
         response = {"type": "clarification", "content": state.get("clarification_options")}
         logger.info(f"💬 CLARIFICATION RESPONSE for query: '{user_query}'")
     elif state.get("plotly_spec"):
-        response = {"type": "chart", "content": state.get("plotly_spec")}
+        plotly_obj = state.get("plotly_spec")
+        # Se for objeto Plotly, converter para JSON para serialização
+        if hasattr(plotly_obj, 'to_dict'):
+            chart_content = plotly_obj.to_dict()
+        else:
+            chart_content = plotly_obj
+        response = {"type": "chart", "content": chart_content}
         logger.info(f"📈 CHART RESPONSE for query: '{user_query}'")
     elif state.get("retrieved_data"):
         response = {"type": "data", "content": _clean_json_values(state.get("retrieved_data"))}

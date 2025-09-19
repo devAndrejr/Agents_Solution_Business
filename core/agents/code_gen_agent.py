@@ -163,8 +163,14 @@ IMPORTANTE PARA ANÁLISES TEMPORAIS:
                 *   **SEMPRE ORDENE** o DataFrame pela coluna do eixo X antes de criar o gráfico, se a ordem for importante (como tempo ou categorias sequenciais).
                 *   Adicione um título significativo ao gráfico.
             8.  **O seu código deve ser um script Python completo e executável.** Não inclua explicações ou texto adicional fora do código.
-            9.  **Verifique a Disponibilidade dos Dados:** Se o `df_raw_data` estiver vazio ou não contiver dados suficientes para a análise/gráfico solicitado, armazene na variável `result` uma mensagem clara e amigável informando o usuário que não há dados disponíveis para a consulta específica (ex: 'Não foram encontrados dados para a sua consulta.').
-            10. **NÃO chame .show() ou print()** no seu código. Apenas armazene o objeto final (DataFrame, figura Plotly, ou texto) na variável `result`.
+            9.  **PARA CONSULTAS TOP N (mais vendidos, melhores, etc.):**
+                - **SEMPRE LIMITE RESULTADO:** Use .head(N) para exibir apenas o número solicitado
+                - **AGREGUE POR PRODUTO:** Group by 'codigo' e 'nome_produto' antes de somar vendas
+                - **SOME TODAS AS UNES:** Para produtos repetidos em várias UNEs, some as vendas totais
+                - Exemplo: `df_top = df_filtered.groupby(['codigo', 'nome_produto']).agg({'mes_01': 'sum', 'mes_02': 'sum'}).reset_index().head(10)`
+                - **NÃO retorne produtos duplicados de UNEs diferentes**
+            10. **Verifique a Disponibilidade dos Dados:** Se o `df_raw_data` estiver vazio ou não contiver dados suficientes para a análise/gráfico solicitado, armazene na variável `result` uma mensagem clara e amigável informando o usuário que não há dados disponíveis para a consulta específica (ex: 'Não foram encontrados dados para a sua consulta.').
+            11. **NÃO chame .show() ou print()** no seu código. Apenas armazene o objeto final (DataFrame, figura Plotly, ou texto) na variável `result`.
 
             **Exemplo de Script Python para Gráfico de Barras:**
             ```python
