@@ -90,15 +90,11 @@ class CodeGenAgent:
 COLUNAS PRINCIPAIS DISPONÍVEIS (use exatamente como mostrado):
 - nomesegmento (texto - segmento do produto)
 - nome_categoria (texto - categoria do produto)
-- nomegrupo (texto - grupo do produto)
 - nome_produto (texto - nome do produto)
 - nome_fabricante (texto - fabricante)
 - mes_01, mes_02, mes_03, mes_04, mes_05, mes_06, mes_07, mes_08, mes_09, mes_10, mes_11, mes_12 (numérico - vendas mensais)
-- mes_parcial (numérico - vendas do mês parcial atual)
-- estoque_atual (numérico - estoque atual)
-- estoque_cd (numérico - estoque CD)
 - preco_38_percent (numérico - preço)
-- une_nome (texto - nome da unidade)
+- une (numérico - código da unidade)
 - codigo (numérico - código do produto)
 
 IMPORTANTE PARA ANÁLISES TEMPORAIS:
@@ -118,11 +114,11 @@ IMPORTANTE PARA ANÁLISES TEMPORAIS:
                 **ATENÇÃO CRÍTICA:** Use EXATAMENTE os nomes de colunas conforme estão no DataFrame. Principais colunas disponíveis:
                 - Segmento: 'nomesegmento' (minúsculas)
                 - Categoria: 'nome_categoria' (com underline)
-                - Grupo: 'nomegrupo' (minúsculas)
                 - Produto: 'nome_produto' (com underline)
                 - Vendas mensais: 'mes_01', 'mes_02', ..., 'mes_12' (minúsculas com underline)
-                - Estoque: 'estoque_atual', 'estoque_cd', 'estoque_lv'
                 - Fabricante: 'nome_fabricante' (com underline)
+                - Preço: 'preco_38_percent'
+                - UNE: 'une' (código numérico da unidade)
                 - Código: 'codigo' (sem acento)
 
                 **EXEMPLOS DE USO CORRETO:**
@@ -208,10 +204,8 @@ IMPORTANTE PARA ANÁLISES TEMPORAIS:
             'NOMEGRUPO': 'nomegrupo',
             'NOME_PRODUTO': 'nome_produto',
             'NOME_FABRICANTE': 'nome_fabricante',
-            'ESTOQUE_UNE': 'estoque_atual',
-            'ESTOQUE_CD': 'estoque_cd',
             'NOME': 'nome_produto',
-            'UNE_NOME': 'une_nome',
+            'UNE_NOME': 'une',
             'PRODUTO': 'nome_produto',
             'FABRICANTE': 'nome_fabricante'
         }
