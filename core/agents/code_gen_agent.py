@@ -132,7 +132,7 @@ IMPORTANTE PARA ANÁLISES TEMPORAIS:
                 **PARA ANÁLISES TEMPORAIS:**
                 - Evolução de vendas: `vendas_cols = ['mes_01', 'mes_02', 'mes_03', 'mes_04', 'mes_05', 'mes_06', 'mes_07', 'mes_08', 'mes_09', 'mes_10', 'mes_11', 'mes_12']`
                 - Transformar para formato longo: `df_melted = pd.melt(df, id_vars=['codigo', 'nome_produto'], value_vars=vendas_cols, var_name='mes', value_name='vendas')`
-                - Gráfico temporal: `fig = px.line(df_melted, x='mes', y='vendas', title='Evolução de Vendas')`
+                - Gráfico temporal: `ordem_meses = ['mes_01', 'mes_02', 'mes_03', 'mes_04', 'mes_05', 'mes_06', 'mes_07', 'mes_08', 'mes_09', 'mes_10', 'mes_11', 'mes_12']; df_melted['mes'] = pd.Categorical(df_melted['mes'], categories=ordem_meses, ordered=True); df_melted = df_melted.sort_values('mes'); fig = px.line(df_melted, x='mes', y='vendas', title='Evolução de Vendas')`
             3.  **Contexto de Colunas Relevantes:**
                 ```
                 {context}
@@ -151,9 +151,16 @@ IMPORTANTE PARA ANÁLISES TEMPORAIS:
                     - Se o usuário pedir "evolução", "tendência", "ao longo do tempo", "mensais", "últimos meses":
                     - Use pd.melt() para transformar mes_01-mes_12 em formato longo
                     - Exemplo: `df_melted = pd.melt(df_filtered, id_vars=['codigo', 'nome_produto'], value_vars=['mes_01', 'mes_02', 'mes_03', 'mes_04', 'mes_05', 'mes_06', 'mes_07', 'mes_08', 'mes_09', 'mes_10', 'mes_11', 'mes_12'], var_name='mes', value_name='vendas')`
+                    - **ORDENAÇÃO TEMPORAL CRÍTICA:** Após o melt, SEMPRE ordene corretamente:
+                      ```python
+                      # Criar ordem cronológica correta dos meses
+                      ordem_meses = ['mes_01', 'mes_02', 'mes_03', 'mes_04', 'mes_05', 'mes_06', 'mes_07', 'mes_08', 'mes_09', 'mes_10', 'mes_11', 'mes_12']
+                      df_melted['mes'] = pd.Categorical(df_melted['mes'], categories=ordem_meses, ordered=True)
+                      df_melted = df_melted.sort_values('mes')
+                      ```
                     - Use px.line() para mostrar tendência temporal
                     - Para "últimos X meses": filtre apenas as colunas relevantes antes do melt
-                *   **SEMPRE ORDENE** o DataFrame pela coluna do eixo X antes de criar o gráfico, se a ordem for importante (como tempo ou categorias sequenciais). Ex: `df_grafico = df_grafico.sort_values(by='coluna_do_eixo_x')`.
+                *   **SEMPRE ORDENE** o DataFrame pela coluna do eixo X antes de criar o gráfico, se a ordem for importante (como tempo ou categorias sequenciais).
                 *   Adicione um título significativo ao gráfico.
             8.  **O seu código deve ser um script Python completo e executável.** Não inclua explicações ou texto adicional fora do código.
             9.  **Verifique a Disponibilidade dos Dados:** Se o `df_raw_data` estiver vazio ou não contiver dados suficientes para a análise/gráfico solicitado, armazene na variável `result` uma mensagem clara e amigável informando o usuário que não há dados disponíveis para a consulta específica (ex: 'Não foram encontrados dados para a sua consulta.').
