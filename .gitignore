@@ -60,7 +60,6 @@ tmp/
 generated_charts/
 
 # Parquet files
-data/parquet/
 data/parquet_cleaned/
 
 # Specific project files to ignore
