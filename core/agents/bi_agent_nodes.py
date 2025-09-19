@@ -130,15 +130,15 @@ def generate_parquet_query(state: AgentState, llm_adapter: BaseLLMAdapter, parqu
         with open(catalog_file_path, 'r', encoding='utf-8') as f:
             catalog_data = json.load(f)
         
-        # Find the entry for admatao.parquet
-        admatao_catalog = next((entry for entry in catalog_data if entry.get("file_name") == "admatao.parquet"), None)
+        # Find the entry for admatao_full.parquet
+        admatao_catalog = next((entry for entry in catalog_data if entry.get("file_name") == "admatao_full.parquet"), None)
         
         if admatao_catalog and "column_descriptions" in admatao_catalog:
             column_descriptions = admatao_catalog["column_descriptions"]
             column_descriptions_str = json.dumps(column_descriptions, indent=2, ensure_ascii=False)
         else:
             column_descriptions_str = "Nenhuma descrição de coluna disponível."
-            logger.warning("Descrições de coluna para admatao.parquet não encontradas no catálogo.")
+            logger.warning("Descrições de coluna para admatao_full.parquet não encontradas no catálogo.")
 
     except FileNotFoundError:
         column_descriptions_str = "Erro: Arquivo de catálogo não encontrado."

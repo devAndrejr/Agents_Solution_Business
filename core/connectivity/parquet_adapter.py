@@ -124,7 +124,10 @@ class ParquetAdapter(DatabaseAdapter):
                         # Default to equality if operator not recognized or simple string
                         filtered_df = filtered_df[filtered_df[column] == condition]
                 else:
-                    # Simple equality
+                    # Simple equality - with automatic type conversion
+                    # Se a coluna é numérica e a condição é string numérica, converta
+                    if pd.api.types.is_numeric_dtype(filtered_df[column]) and isinstance(condition, str) and condition.isdigit():
+                        condition = pd.to_numeric(condition)
                     filtered_df = filtered_df[filtered_df[column] == condition]
 
             # ✅ OTIMIZAÇÃO: Limitar resultados para evitar problemas de memória

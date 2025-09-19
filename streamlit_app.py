@@ -141,10 +141,10 @@ else:
 
             # Tentar múltiplos caminhos para encontrar o arquivo
             possible_paths = [
-                os.path.join(os.getcwd(), "data", "parquet", "admatao.parquet"),
-                "/mount/src/agents_solution_business/data/parquet/admatao.parquet",  # Streamlit Cloud
-                "data/parquet/admatao.parquet",  # Relativo
-                "./data/parquet/admatao.parquet"  # Relativo explícito
+                os.path.join(os.getcwd(), "data", "parquet", "admatao_full.parquet"),
+                "/mount/src/agents_solution_business/data/parquet/admatao_full.parquet",  # Streamlit Cloud
+                "data/parquet/admatao_full.parquet",  # Relativo
+                "./data/parquet/admatao_full.parquet"  # Relativo explícito
             ]
 
             parquet_path = None
