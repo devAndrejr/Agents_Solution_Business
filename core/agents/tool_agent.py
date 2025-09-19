@@ -10,7 +10,7 @@ from langchain_core.runnables import RunnableConfig
 
 from core.llm_base import BaseLLMAdapter
 from core.llm_adapter import OpenAILLMAdapter
-from core.llm_langchain_adapter import CustomLangChainLLM
+# from core.llm_langchain_adapter import CustomLangChainLLM  # Arquivo não existe
 
 from core.tools.mcp_sql_server_tools import sql_tools
 

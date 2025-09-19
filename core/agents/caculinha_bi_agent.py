@@ -10,7 +10,7 @@ from langchain_core.runnables import Runnable, RunnableLambda
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage, ToolCall
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-from core.llm_langchain_adapter import CustomLangChainLLM
+from core.llm_adapter import OpenAILLMAdapter
 
 from core.connectivity.base import DatabaseAdapter
 from core.config.settings import settings # Import the settings instance
