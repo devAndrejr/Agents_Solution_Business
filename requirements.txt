@@ -30,3 +30,6 @@ plotly>=5.0.0
 
 # Security
 bcrypt>=4.0.0
+
+# System monitoring (required for MemoryOptimizer)
+psutil>=5.0.0
