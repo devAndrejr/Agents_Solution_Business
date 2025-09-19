@@ -120,6 +120,8 @@ else:
                     debug_info.append(f"Settings erro: {e}")
 
             if not api_key or not api_key.startswith("sk-"):
+                debug_info.append("❌ CRITICAL: OPENAI_API_KEY não encontrada")
+                debug_info.append("💡 SOLUÇÃO: Configure OPENAI_API_KEY nos secrets do Streamlit Cloud")
                 raise ValueError("OPENAI_API_KEY não encontrada em secrets nem settings")
 
             # Debug 4: Inicializar LLM
