@@ -167,7 +167,7 @@ IMPORTANTE PARA ANÁLISES TEMPORAIS:
                 - **SEMPRE LIMITE RESULTADO:** Use .head(N) para exibir apenas o número solicitado
                 - **AGREGUE POR PRODUTO:** Group by 'codigo' e 'nome_produto' antes de somar vendas
                 - **SOME TODAS AS UNES:** Para produtos repetidos em várias UNEs, some as vendas totais
-                - Exemplo: `df_top = df_filtered.groupby(['codigo', 'nome_produto']).agg({'mes_01': 'sum', 'mes_02': 'sum'}).reset_index().head(10)`
+                - Exemplo: `df_top = df_filtered.groupby(['codigo', 'nome_produto']).agg({{'mes_01': 'sum', 'mes_02': 'sum'}}).reset_index().head(10)`
                 - **NÃO retorne produtos duplicados de UNEs diferentes**
             10. **Verifique a Disponibilidade dos Dados:** Se o `df_raw_data` estiver vazio ou não contiver dados suficientes para a análise/gráfico solicitado, armazene na variável `result` uma mensagem clara e amigável informando o usuário que não há dados disponíveis para a consulta específica (ex: 'Não foram encontrados dados para a sua consulta.').
             11. **NÃO chame .show() ou print()** no seu código. Apenas armazene o objeto final (DataFrame, figura Plotly, ou texto) na variável `result`.

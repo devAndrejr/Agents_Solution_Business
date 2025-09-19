@@ -410,7 +410,10 @@ else:
                     else:
                         raise ValueError(f"Formato de gráfico não suportado: {type(content)}")
 
-                    st.plotly_chart(fig, use_container_width=True)
+                    # Gerar key único para evitar conflitos de ID
+                    import uuid
+                    unique_key = f"chart_{uuid.uuid4().hex[:8]}"
+                    st.plotly_chart(fig, use_container_width=True, key=unique_key)
                     st.success("✅ Gráfico gerado com sucesso!")
                 except Exception as e:
                     st.error(f"Erro ao renderizar gráfico: {e}")
