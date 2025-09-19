@@ -21,12 +21,24 @@ class ParquetAdapter(DatabaseAdapter):
     def _load_dataframe(self):
         """
         Loads the parquet file into a pandas DataFrame if not already loaded.
+        Optimized for Streamlit Cloud memory limits.
         """
         if self._dataframe is None:
             MemoryOptimizer.log_memory_usage("Before loading Parquet")
             logger.info(f"Loading Parquet file from {self.file_path}...")
 
-            self._dataframe = pd.read_parquet(self.file_path)
+            # OTIMIZAÇÃO STREAMLIT CLOUD: Carregar apenas colunas essenciais
+            essential_cols = ['codigo', 'nome_produto', 'preco_38_percent', 'nomesegmento',
+                            'nome_categoria', 'nome_fabricante', 'mes_01', 'mes_02', 'mes_03',
+                            'mes_04', 'mes_05', 'mes_06', 'mes_07', 'mes_08', 'mes_09',
+                            'mes_10', 'mes_11', 'mes_12', 'une']
+
+            try:
+                self._dataframe = pd.read_parquet(self.file_path, columns=essential_cols)
+            except:
+                # Fallback: carregar tudo se colunas específicas falharem
+                self._dataframe = pd.read_parquet(self.file_path)
+
             logger.info(f"Parquet file loaded. Shape: {self._dataframe.shape}")
 
             # Otimizar uso de memória
