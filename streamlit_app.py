@@ -150,7 +150,10 @@ else:
                 })
                 os.makedirs(os.path.dirname(parquet_path), exist_ok=True)
                 mock_data.to_parquet(parquet_path)
-                debug_info.append("⚠️ Arquivo parquet não encontrado - criado dados mock")
+                debug_info.append("🚨 CRÍTICO: Arquivo admmatao.parquet não encontrado!")
+                debug_info.append("⚠️ Usando dados MOCK - respostas serão incorretas!")
+                debug_info.append(f"📍 Procurado em: {parquet_path}")
+                debug_info.append("💡 SOLUÇÃO: Copiar arquivo real admmatao.parquet para data/parquet/")
             parquet_adapter = ParquetAdapter(file_path=parquet_path)
             debug_info.append("✅ Parquet OK")
 
