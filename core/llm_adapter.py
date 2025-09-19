@@ -24,7 +24,7 @@ class OpenAILLMAdapter:
 
         logger.info("Adaptador da OpenAI inicializado com sucesso.")
 
-    def get_completion(self, messages, model="gpt-4-turbo", temperature=0, max_tokens=1024, json_mode=False):
+    def get_completion(self, messages, model="gpt-4o-mini", temperature=0, max_tokens=1024, json_mode=False):
         """
         Obtém uma conclusão do modelo da OpenAI com cache inteligente.
         """

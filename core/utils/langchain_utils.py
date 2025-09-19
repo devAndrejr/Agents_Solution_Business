@@ -29,7 +29,7 @@ def get_langchain_model(model_name=None, temperature=None):
 
         # Usa os valores padrão se não fornecidos
         if not model_name:
-            model_name = os.getenv("LLM_MODEL", "gpt-4")
+            model_name = os.getenv("LLM_MODEL", "gpt-4o-mini")
 
         if not temperature:
             temperature = float(os.getenv("LLM_TEMPERATURE", "0"))
