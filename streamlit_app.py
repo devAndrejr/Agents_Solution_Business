@@ -102,22 +102,28 @@ else:
             api_key = None
             secrets_status = "❌ Falhou"
             try:
+                debug_info.append("Tentando acessar st.secrets...")
                 api_key = st.secrets.get("OPENAI_API_KEY")
                 if api_key and api_key.startswith("sk-"):
                     secrets_status = "✅ OK"
-                    debug_info.append(f"Secrets OpenAI: OK ({api_key[:10]}...)")
+                    debug_info.append(f"✅ Secrets OpenAI: OK ({api_key[:10]}...)")
                 else:
-                    debug_info.append(f"Secrets OpenAI: Inválida")
+                    debug_info.append(f"❌ Secrets OpenAI: Inválida ou vazia")
+                    debug_info.append(f"❌ Valor recebido: {str(api_key)[:20] if api_key else 'None'}")
             except Exception as e:
-                debug_info.append(f"Secrets erro: {e}")
+                debug_info.append(f"❌ Secrets erro: {str(e)}")
+                debug_info.append(f"❌ Tipo erro: {type(e).__name__}")
 
             # Debug 3: Fallback para settings
             if not api_key or not api_key.startswith("sk-"):
                 try:
+                    debug_info.append("Tentando carregar settings...")
                     api_key = settings.OPENAI_API_KEY.get_secret_value()
                     debug_info.append(f"Settings OpenAI: OK")
                 except Exception as e:
-                    debug_info.append(f"Settings erro: {e}")
+                    debug_info.append(f"❌ Settings erro completo: {str(e)}")
+                    debug_info.append(f"❌ Tipo do erro: {type(e).__name__}")
+                    # Se settings falhar, pode ser problema com variáveis DB obrigatórias
 
             if not api_key or not api_key.startswith("sk-"):
                 debug_info.append("❌ CRITICAL: OPENAI_API_KEY não encontrada")
@@ -173,7 +179,17 @@ else:
             }
 
         except Exception as e:
-            debug_info.append(f"❌ ERRO: {str(e)}")
+            debug_info.append(f"❌ ERRO CRÍTICO: {str(e)}")
+            debug_info.append(f"❌ Tipo do erro: {type(e).__name__}")
+            debug_info.append(f"❌ Linha do erro: {e.__traceback__.tb_lineno if e.__traceback__ else 'unknown'}")
+
+            # Diagnóstico específico para erros comuns
+            if "ValidationError" in str(type(e)):
+                debug_info.append("💡 CAUSA PROVÁVEL: Variáveis obrigatórias faltando em settings")
+            elif "ImportError" in str(type(e)) or "ModuleNotFoundError" in str(type(e)):
+                debug_info.append("💡 CAUSA PROVÁVEL: Dependência faltando nos requirements")
+            elif "FileNotFoundError" in str(type(e)):
+                debug_info.append("💡 CAUSA PROVÁVEL: Arquivo parquet não encontrado")
 
             # Mostrar debug completo na sidebar APENAS para admins
             user_role = st.session_state.get('role', '')
