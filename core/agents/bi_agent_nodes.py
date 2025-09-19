@@ -310,8 +310,13 @@ def generate_plotly_spec(state: AgentState, llm_adapter: BaseLLMAdapter, code_ge
         logger.info(f"📋 CodeGenAgent response output length: {len(str(code_gen_response.get('output', '')))}")
 
         if code_gen_response.get("type") == "chart":
-            # Se o CodeGenAgent retornou um gráfico, extrai o JSON do Plotly
-            plotly_spec = json.loads(code_gen_response.get("output"))
+            # Se o CodeGenAgent retornou um gráfico, usa diretamente o objeto
+            plotly_fig = code_gen_response.get("output")
+            # Se for string JSON, parse; se for objeto, usa direto
+            if isinstance(plotly_fig, str):
+                plotly_spec = json.loads(plotly_fig)
+            else:
+                plotly_spec = plotly_fig
             return {"plotly_spec": plotly_spec}
         elif code_gen_response.get("type") == "error":
             return {"final_response": {"type": "text", "content": code_gen_response.get("output")}}

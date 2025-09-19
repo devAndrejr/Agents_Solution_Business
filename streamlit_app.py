@@ -396,20 +396,25 @@ else:
                     st.caption(f"📝 Pergunta: {user_query}")
 
                 try:
-                    if isinstance(content, str):
-                        # Se content é string JSON, parse para objeto
+                    # Verificar se é objeto Plotly direto ou JSON
+                    if hasattr(content, 'to_json'):
+                        # É um objeto Plotly Figure
+                        fig = content
+                    elif isinstance(content, str):
+                        # É string JSON, parse e cria figura
                         chart_data = json.loads(content)
+                        fig = go.Figure(chart_data)
+                    elif isinstance(content, dict):
+                        # É dict, cria figura diretamente
+                        fig = go.Figure(content)
                     else:
-                        # Se content já é dict, usa diretamente
-                        chart_data = content
+                        raise ValueError(f"Formato de gráfico não suportado: {type(content)}")
 
-                    # Cria figura Plotly a partir do JSON
-                    fig = go.Figure(chart_data)
                     st.plotly_chart(fig, use_container_width=True)
                     st.success("✅ Gráfico gerado com sucesso!")
                 except Exception as e:
                     st.error(f"Erro ao renderizar gráfico: {e}")
-                    st.write("Dados do gráfico:", content)
+                    st.write("Dados do gráfico:", str(content)[:500])
             elif response_type == "data" and isinstance(content, list):
                 # 📝 Mostrar contexto da pergunta que gerou os dados
                 user_query = response_data.get("user_query")

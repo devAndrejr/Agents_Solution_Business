@@ -334,9 +334,8 @@ Código gerado pelo LLM (após correções):
                 return {"type": "dataframe", "output": result}
             elif 'plotly' in str(type(result)):
                 self.logger.info(f"Resultado do código gerado (Chart): {type(result)}")
-                # Serializar o objeto Plotly Figure para JSON
-                chart_json = pio.to_json(result)
-                return {"type": "chart", "output": chart_json}
+                # Retornar o objeto Plotly diretamente para preservar funcionalidade
+                return {"type": "chart", "output": result}
             else:
                 self.logger.info(f"Resultado do código gerado (Texto): {result}")
                 return {"type": "text", "output": str(result)}
