@@ -8,18 +8,58 @@ import pandas as pd
 import logging
 from core.auth import login, sessao_expirada
 
-# Importações do backend para integração direta
+# Importações do backend para integração direta - DIAGNÓSTICO DETALHADO
+import_status = {}
+BACKEND_AVAILABLE = True
+
+# Testar cada import individualmente para diagnóstico
+try:
+    from core.config.settings import settings
+    import_status["settings"] = "✅ OK"
+except Exception as e:
+    import_status["settings"] = f"❌ {str(e)}"
+    BACKEND_AVAILABLE = False
+
+try:
+    from langchain_core.messages import HumanMessage
+    import_status["langchain_core"] = "✅ OK"
+except Exception as e:
+    import_status["langchain_core"] = f"❌ {str(e)}"
+    BACKEND_AVAILABLE = False
+
+try:
+    from core.llm_adapter import OpenAILLMAdapter
+    import_status["llm_adapter"] = "✅ OK"
+except Exception as e:
+    import_status["llm_adapter"] = f"❌ {str(e)}"
+    BACKEND_AVAILABLE = False
+
+try:
+    from core.connectivity.parquet_adapter import ParquetAdapter
+    import_status["parquet_adapter"] = "✅ OK"
+except Exception as e:
+    import_status["parquet_adapter"] = f"❌ {str(e)}"
+    BACKEND_AVAILABLE = False
+
+try:
+    from core.agents.code_gen_agent import CodeGenAgent
+    import_status["code_gen_agent"] = "✅ OK"
+except Exception as e:
+    import_status["code_gen_agent"] = f"❌ {str(e)}"
+    BACKEND_AVAILABLE = False
+
 try:
     from core.graph.graph_builder import GraphBuilder
-    from core.config.settings import settings
-    from core.llm_adapter import OpenAILLMAdapter
-    from core.connectivity.parquet_adapter import ParquetAdapter
-    from core.agents.code_gen_agent import CodeGenAgent
-    from langchain_core.messages import HumanMessage
-    BACKEND_AVAILABLE = True
+    import_status["graph_builder"] = "✅ OK"
 except Exception as e:
-    logging.warning(f"Backend components não disponíveis: {e}")
+    import_status["graph_builder"] = f"❌ {str(e)}"
     BACKEND_AVAILABLE = False
+
+# Log detalhado apenas para debugging
+if not BACKEND_AVAILABLE:
+    logging.warning("DIAGNÓSTICO DE IMPORTS:")
+    for component, status in import_status.items():
+        logging.warning(f"  {component}: {status}")
 
 # --- Autenticação ---
 if "authenticated" not in st.session_state:
@@ -39,13 +79,22 @@ else:
         """Inicializa os componentes do backend uma única vez"""
         debug_info = []
 
-        # Debug 1: Verificar imports
+        # Debug 1: Verificar imports com detalhes
         debug_info.append(f"BACKEND_AVAILABLE: {BACKEND_AVAILABLE}")
         if not BACKEND_AVAILABLE:
-            with st.sidebar:
-                st.error("❌ Imports do backend falharam")
-                st.write("Componentes não carregados:")
-                st.code("LangGraph, OpenAI, ParquetAdapter, etc.")
+            user_role = st.session_state.get('role', '')
+            if user_role == 'admin':
+                with st.sidebar:
+                    st.error("❌ Imports do backend falharam")
+                    st.write("**Diagnóstico detalhado:**")
+                    for component, status in import_status.items():
+                        if "✅" in status:
+                            st.success(f"{component}: {status}")
+                        else:
+                            st.error(f"{component}: {status}")
+            else:
+                with st.sidebar:
+                    st.error("❌ Sistema temporariamente indisponível")
             return None
 
         try:
