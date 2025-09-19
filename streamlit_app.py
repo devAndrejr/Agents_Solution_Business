@@ -138,23 +138,68 @@ else:
             # Debug 5: Inicializar Parquet
             debug_info.append("Inicializando Parquet...")
             import os
-            parquet_path = os.path.join(os.getcwd(), "data", "parquet", "admatao.parquet")
-            if not os.path.exists(parquet_path):
-                # Criar dados mock para cloud se arquivo não existir
+
+            # Tentar múltiplos caminhos para encontrar o arquivo
+            possible_paths = [
+                os.path.join(os.getcwd(), "data", "parquet", "admatao.parquet"),
+                "/mount/src/agents_solution_business/data/parquet/admatao.parquet",  # Streamlit Cloud
+                "data/parquet/admatao.parquet",  # Relativo
+                "./data/parquet/admatao.parquet"  # Relativo explícito
+            ]
+
+            parquet_path = None
+            for path in possible_paths:
+                debug_info.append(f"🔍 Testando: {path}")
+                if os.path.exists(path):
+                    parquet_path = path
+                    debug_info.append(f"✅ Arquivo encontrado em: {path}")
+                    break
+                else:
+                    debug_info.append(f"❌ Não encontrado: {path}")
+
+            if not parquet_path:
+                # ÚLTIMO RECURSO: Criar dados mock se arquivo realmente não existir
+                debug_info.append("🚨 CRÍTICO: Arquivo admmatao.parquet não encontrado em NENHUM local!")
+                debug_info.append("⚠️ Criando dados MOCK - respostas serão incorretas!")
+                debug_info.append(f"🔍 Diretório atual: {os.getcwd()}")
+                debug_info.append(f"📁 Conteúdo do diretório: {os.listdir('.')}")
+
                 import pandas as pd
                 mock_data = pd.DataFrame({
                     'codigo': [59294, 12345, 67890],
-                    'descricao': ['Produto Exemplo 1', 'Produto Exemplo 2', 'Produto Exemplo 3'],
-                    'preco': [99.90, 149.50, 79.30],
-                    'categoria': ['Categoria A', 'Categoria B', 'Categoria A']
+                    'nome_produto': ['PRODUTO MOCK 1', 'PRODUTO MOCK 2', 'PRODUTO MOCK 3'],
+                    'preco_38_percent': [99.90, 149.50, 79.30],
+                    'nome_categoria': ['MOCK A', 'MOCK B', 'MOCK A']
                 })
+
+                # Usar primeiro caminho como fallback
+                parquet_path = possible_paths[0]
                 os.makedirs(os.path.dirname(parquet_path), exist_ok=True)
                 mock_data.to_parquet(parquet_path)
-                debug_info.append("🚨 CRÍTICO: Arquivo admmatao.parquet não encontrado!")
-                debug_info.append("⚠️ Usando dados MOCK - respostas serão incorretas!")
-                debug_info.append(f"📍 Procurado em: {parquet_path}")
-                debug_info.append("💡 SOLUÇÃO: Copiar arquivo real admmatao.parquet para data/parquet/")
+                debug_info.append(f"📝 Mock criado em: {parquet_path}")
+            else:
+                debug_info.append(f"🎉 USANDO ARQUIVO REAL: {parquet_path}")
+
             parquet_adapter = ParquetAdapter(file_path=parquet_path)
+
+            # Verificar se carregou dados reais ou mock
+            try:
+                parquet_adapter.connect()
+                sample_data = parquet_adapter.execute_query({})[:3]  # Pegar 3 registros
+                if sample_data and len(sample_data) > 0:
+                    first_product = sample_data[0]
+                    if 'nome_produto' in first_product:
+                        produto_nome = first_product['nome_produto']
+                        debug_info.append(f"📋 Primeiro produto: {produto_nome}")
+                        if 'MOCK' in produto_nome or 'Exemplo' in produto_nome:
+                            debug_info.append("⚠️ CONFIRMADO: Usando dados MOCK!")
+                        else:
+                            debug_info.append("✅ CONFIRMADO: Usando dados REAIS!")
+                    debug_info.append(f"📊 Total de colunas: {len(first_product) if first_product else 0}")
+                    debug_info.append(f"📈 Registros de amostra: {len(sample_data)}")
+            except Exception as e:
+                debug_info.append(f"❌ Erro ao verificar dados: {str(e)}")
+
             debug_info.append("✅ Parquet OK")
 
             # Debug 6: Inicializar CodeGen
