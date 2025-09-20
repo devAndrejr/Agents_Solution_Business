@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import Field, SecretStr, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import urllib
