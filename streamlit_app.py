@@ -104,7 +104,6 @@ def main_app():
     with st.form("query_form", clear_on_submit=True):
         query_input = st.text_input(
             "Digite sua pergunta sobre os dados:",
-            value=st.session_state.get('selected_query', ''),
             placeholder="Ex: gere um gráfico de vendas do produto 59294",
             key="query_text_input" # Adiciona uma chave para o input
         )
