@@ -189,7 +189,15 @@ class DirectQueryEngine:
         try:
             query_lower = user_query.lower()
 
-            # CORREÇÃO: Detectar GRÁFICO DE BARRAS para produto específico com UNE (MAIOR PRIORIDADE)
+            # CORREÇÃO: Detectar GRÁFICO DE BARRAS para produto em TODAS AS UNEs (MAIOR PRIORIDADE)
+            product_all_unes_match = re.search(r'(gr[áa]fico.*barras?|barras?).*produto\s*(\d{5,7}).*(todas.*unes?|todas.*filiais?)', query_lower)
+            if product_all_unes_match:
+                produto_codigo = product_all_unes_match.group(2)
+                result = ("produto_vendas_todas_unes", {"produto_codigo": produto_codigo})
+                logger.info(f"CLASSIFICADO COMO: produto_vendas_todas_unes (produto: {produto_codigo})")
+                return result
+
+            # Detectar GRÁFICO DE BARRAS para produto específico com UNE específica
             product_bar_une_match = re.search(r'(gr[áa]fico.*barras?|barras?).*produto\s*(\d{5,7}).*une\s*(\d+)', query_lower)
             if product_bar_une_match:
                 produto_codigo = product_bar_une_match.group(2)
@@ -265,7 +273,7 @@ class DirectQueryEngine:
 
         try:
             # 🔧 FIX CRÍTICO: Para consultas específicas de produtos, carregar dataset completo
-            full_dataset_queries = ["consulta_produto_especifico", "consulta_une_especifica", "evolucao_vendas_produto", "produto_vendas_une_barras"]
+            full_dataset_queries = ["consulta_produto_especifico", "consulta_une_especifica", "evolucao_vendas_produto", "produto_vendas_une_barras", "produto_vendas_todas_unes"]
             use_full_dataset = query_type in full_dataset_queries
 
             if use_full_dataset:
@@ -704,6 +712,88 @@ class DirectQueryEngine:
                 "total_vendas": total_vendas
             },
             "summary": f"Gráfico de barras gerado para {produto_nome} (código {produto_codigo}) na {une_nome}. Total de vendas: {total_vendas:,.0f} unidades.",
+            "tokens_used": 0
+        }
+
+    def _query_produto_vendas_todas_unes(self, df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Query: Gráfico de barras para produto específico em todas as UNEs."""
+        produto_codigo = params.get('produto_codigo')
+
+        try:
+            produto_codigo = int(produto_codigo)
+        except (ValueError, TypeError):
+            return {"error": f"Código de produto inválido: {produto_codigo}", "type": "error"}
+
+        # Verificar se produto existe
+        produto_data = df[df['codigo'] == produto_codigo]
+        if produto_data.empty:
+            return {"error": f"Produto {produto_codigo} não encontrado", "type": "error"}
+
+        produto_nome = produto_data.iloc[0]['nome_produto']
+
+        # Agrupar por UNE e somar vendas
+        vendas_meses = [f'mes_{i:02d}' for i in range(1, 13)]
+        vendas_por_une = produto_data.groupby(['une', 'une_nome'])[vendas_meses].sum()
+        vendas_por_une['vendas_total'] = vendas_por_une.sum(axis=1)
+
+        # Ordenar por vendas totais (decrescente)
+        vendas_por_une = vendas_por_une.sort_values('vendas_total', ascending=False)
+
+        # Preparar dados para gráfico com melhorias visuais
+        if len(vendas_por_une) > 20:
+            # Se muitas UNEs, pegar apenas as top 20 para evitar gráfico muito largo
+            vendas_por_une_top = vendas_por_une.head(20)
+            titulo_extra = f" (Top 20 de {len(vendas_por_une)} UNEs)"
+        else:
+            vendas_por_une_top = vendas_por_une
+            titulo_extra = ""
+
+        # Criar labels melhorados
+        x_labels = []
+        y_values = []
+        for (une_codigo, une_nome), row in vendas_por_une_top.iterrows():
+            label = f"{une_nome}\\n(UNE {une_codigo})"
+            x_labels.append(label)
+            y_values.append(float(row['vendas_total']))
+
+        # Cores baseadas na performance (verde para altas vendas, amarelo para médias, vermelho para baixas)
+        max_vendas = max(y_values) if y_values else 1
+        colors = []
+        for valor in y_values:
+            if valor >= max_vendas * 0.7:
+                colors.append('#2E8B57')  # Verde escuro para top performers
+            elif valor >= max_vendas * 0.3:
+                colors.append('#FFD700')  # Dourado para performance média
+            else:
+                colors.append('#CD5C5C')  # Vermelho suave para baixa performance
+
+        total_vendas = sum(y_values)
+
+        # Criar dados otimizados para gráfico
+        chart_data = {
+            "x": x_labels,
+            "y": y_values,
+            "type": "bar",
+            "colors": colors,
+            "show_values": True,  # Mostrar valores nas barras
+            "height": max(400, min(800, len(x_labels) * 40)),  # Altura responsiva
+            "margin": {"l": 80, "r": 80, "t": 100, "b": 120}  # Margens maiores para labels
+        }
+
+        return {
+            "type": "chart",
+            "title": f"Vendas por UNE - {produto_nome}{titulo_extra}",
+            "result": {
+                "chart_data": chart_data,
+                "produto_codigo": produto_codigo,
+                "produto_nome": produto_nome,
+                "total_unes": len(vendas_por_une),
+                "unes_exibidas": len(vendas_por_une_top),
+                "total_vendas": total_vendas,
+                "maior_une": vendas_por_une.index[0] if len(vendas_por_une) > 0 else None,
+                "maior_vendas": vendas_por_une.iloc[0]['vendas_total'] if len(vendas_por_une) > 0 else 0
+            },
+            "summary": f"Gráfico de barras gerado para {produto_nome} (código {produto_codigo}) em {len(vendas_por_une_top)} UNEs. Total de vendas: {total_vendas:,.0f} unidades.",
             "tokens_used": 0
         }
 

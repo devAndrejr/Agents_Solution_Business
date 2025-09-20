@@ -324,9 +324,77 @@ else:
                         # Se content já é dict, usa diretamente
                         chart_data = content
 
-                    # Cria figura Plotly a partir do JSON
-                    fig = go.Figure(chart_data)
-                    st.plotly_chart(fig, use_container_width=True)
+                    # Criar gráfico melhorado com cores e interatividade
+                    chart_type = chart_data.get("type", "bar")
+                    x_data = chart_data.get("x", [])
+                    y_data = chart_data.get("y", [])
+                    colors = chart_data.get("colors", None)
+
+                    if chart_type == "bar":
+                        # Gráfico de barras com melhorias visuais
+                        fig = go.Figure()
+
+                        # Adicionar barras com cores personalizadas
+                        fig.add_trace(go.Bar(
+                            x=x_data,
+                            y=y_data,
+                            marker_color=colors if colors else '#1f77b4',
+                            text=[f'{int(val):,}' for val in y_data],  # Rótulos de dados formatados
+                            textposition='outside',
+                            name='Vendas',
+                            hovertemplate='<b>%{x}</b><br>Vendas: %{y:,.0f}<extra></extra>'
+                        ))
+
+                        # Configurações de layout melhoradas
+                        height = chart_data.get("height", 500)
+                        margin = chart_data.get("margin", {"l": 60, "r": 60, "t": 80, "b": 100})
+
+                        fig.update_layout(
+                            title={
+                                'text': response_data.get("title", "Gráfico"),
+                                'x': 0.5,
+                                'xanchor': 'center',
+                                'font': {'size': 16, 'family': 'Arial Black'}
+                            },
+                            xaxis_title="UNE",
+                            yaxis_title="Vendas",
+                            height=height,
+                            margin=margin,
+                            showlegend=False,
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            xaxis={'tickangle': -45, 'tickfont': {'size': 10}},
+                            yaxis={'tickformat': ',.0f'}
+                        )
+
+                        # Adicionar interatividade personalizada
+                        fig.update_traces(
+                            hoverinfo='text+y',
+                            hoverlabel=dict(bgcolor="white", font_size=12, font_family="Arial")
+                        )
+
+                    else:
+                        # Fallback para outros tipos de gráfico
+                        fig = go.Figure(chart_data)
+
+                    # Renderizar gráfico
+                    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True})
+
+                    # Mostrar informações adicionais
+                    result_info = response_data.get("result", {})
+                    if "total_unes" in result_info:
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Total de UNEs", result_info.get("total_unes", 0))
+                        with col2:
+                            st.metric("UNEs Exibidas", result_info.get("unes_exibidas", 0))
+                        with col3:
+                            st.metric("Total de Vendas", f"{result_info.get('total_vendas', 0):,.0f}")
+
+                    # Interatividade: botões para drill-down por UNE (se aplicável)
+                    if "produto_codigo" in result_info and result_info.get("total_unes", 0) > 1:
+                        st.write("🔍 **Análise Detalhada por UNE:**")
+                        st.info("💡 **Dica:** Para ver vendas mensais de uma UNE específica, pergunte: 'gráfico de barras do produto [código] na une [número]'")
+
                     st.success("✅ Gráfico gerado com sucesso!")
                 except Exception as e:
                     st.error(f"Erro ao renderizar gráfico: {e}")
