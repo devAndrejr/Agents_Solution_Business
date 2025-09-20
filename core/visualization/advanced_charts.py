@@ -116,7 +116,7 @@ class AdvancedChartGenerator:
                     color='vendas_total',
                     color_continuous_scale='blues'
                 )
-                fig.update_xaxis(tickangle=45)
+                fig.update_xaxes(tickangle=45)
 
             # Configurações comuns
             fig.update_layout(
@@ -177,7 +177,7 @@ class AdvancedChartGenerator:
                     color='vendas_total',
                     color_continuous_scale='blues'
                 )
-                fig.update_xaxis(tickangle=45)
+                fig.update_xaxes(tickangle=45)
 
             fig.update_layout(
                 height=600,
@@ -427,7 +427,7 @@ class AdvancedChartGenerator:
                     labels={'variacao': 'Variação (%)', 'nome_produto': 'Produtos'}
                 )
 
-                fig.update_xaxis(tickangle=45)
+                fig.update_xaxes(tickangle=45)
                 fig.add_hline(y=0, line_dash="dash", line_color="black")
 
             elif comparison_type == 'product_comparison':
@@ -455,7 +455,7 @@ class AdvancedChartGenerator:
                     barmode='group',
                     height=600
                 )
-                fig.update_xaxis(tickangle=45)
+                fig.update_xaxes(tickangle=45)
 
             fig.update_layout(margin=dict(l=20, r=20, t=60, b=100))
             return fig

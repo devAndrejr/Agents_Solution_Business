@@ -207,6 +207,29 @@ class DirectQueryEngine:
                 logger.info(f"CLASSIFICADO COMO: top_produtos_une_especifica (limite: {limite}, une: {une_nome})")
                 return result
 
+            # ALTA PRIORIDADE: Detectar consultas de VENDAS DE UNE em MÊS específico
+            vendas_une_mes_match = re.search(r'vendas.*une\s*([A-Za-z0-9]+).*em\s*(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)', query_lower)
+            if vendas_une_mes_match:
+                une_nome = vendas_une_mes_match.group(1).upper()
+                mes_nome = vendas_une_mes_match.group(2).lower()
+                result = ("vendas_une_mes_especifico", {"une_nome": une_nome, "mes_nome": mes_nome})
+                logger.info(f"CLASSIFICADO COMO: vendas_une_mes_especifico (une: {une_nome}, mes: {mes_nome})")
+                return result
+
+            # ALTA PRIORIDADE: Detectar consultas de VENDAS TOTAIS DE CADA UNE
+            vendas_todas_unes_match = re.search(r'vendas\s*(totais|total).*(cada\s*une|todas\s*unes|por\s*une)', query_lower)
+            if vendas_todas_unes_match:
+                result = ("ranking_vendas_unes", {})
+                logger.info(f"CLASSIFICADO COMO: ranking_vendas_unes")
+                return result
+
+            # ALTA PRIORIDADE: Detectar consultas de PRODUTO MAIS VENDIDO EM CADA UNE
+            produto_cada_une_match = re.search(r'produto\s*mais\s*vendido.*(cada\s*une|em\s*cada\s*une|por\s*une)', query_lower)
+            if produto_cada_une_match:
+                result = ("produto_mais_vendido_cada_une", {})
+                logger.info(f"CLASSIFICADO COMO: produto_mais_vendido_cada_une")
+                return result
+
             # CORREÇÃO: Detectar GRÁFICO DE BARRAS para produto em TODAS AS UNEs (MAIOR PRIORIDADE)
             product_all_unes_match = re.search(r'(gr[áa]fico.*barras?|barras?).*produto\s*(\d{5,7}).*(todas.*unes?|todas.*filiais?)', query_lower)
             if product_all_unes_match:
@@ -291,7 +314,7 @@ class DirectQueryEngine:
 
         try:
             # 🔧 FIX CRÍTICO: Para consultas específicas de produtos, carregar dataset completo
-            full_dataset_queries = ["consulta_produto_especifico", "consulta_une_especifica", "evolucao_vendas_produto", "produto_vendas_une_barras", "produto_vendas_todas_unes", "preco_produto_une_especifica", "top_produtos_une_especifica"]
+            full_dataset_queries = ["consulta_produto_especifico", "consulta_une_especifica", "evolucao_vendas_produto", "produto_vendas_une_barras", "produto_vendas_todas_unes", "preco_produto_une_especifica", "top_produtos_une_especifica", "vendas_une_mes_especifico", "ranking_vendas_unes", "produto_mais_vendido_cada_une"]
             use_full_dataset = query_type in full_dataset_queries
 
             if use_full_dataset:
@@ -666,6 +689,181 @@ class DirectQueryEngine:
                 "total_produtos_une": len(produtos_une)
             },
             "summary": f"Top {limite} produtos mais vendidos na UNE {une_nome}. Total de vendas: {total_vendas:,.0f} unidades.",
+            "tokens_used": 0
+        }
+
+    def _query_vendas_une_mes_especifico(self, df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Query: Vendas de UNE específica em mês específico."""
+        une_nome = params.get('une_nome')
+        mes_nome = params.get('mes_nome', '').lower()
+
+        # Mapear nome do mês para coluna
+        meses_map = {
+            'janeiro': 'mes_01', 'jan': 'mes_01',
+            'fevereiro': 'mes_02', 'fev': 'mes_02',
+            'março': 'mes_03', 'mar': 'mes_03',
+            'abril': 'mes_04', 'abr': 'mes_04',
+            'maio': 'mes_05', 'mai': 'mes_05',
+            'junho': 'mes_06', 'jun': 'mes_06',
+            'julho': 'mes_07', 'jul': 'mes_07',
+            'agosto': 'mes_08', 'ago': 'mes_08',
+            'setembro': 'mes_09', 'set': 'mes_09',
+            'outubro': 'mes_10', 'out': 'mes_10',
+            'novembro': 'mes_11', 'nov': 'mes_11',
+            'dezembro': 'mes_12', 'dez': 'mes_12'
+        }
+
+        coluna_mes = meses_map.get(mes_nome)
+        if not coluna_mes:
+            return {"error": f"Mês '{mes_nome}' não reconhecido", "type": "error"}
+
+        # Verificar se UNE existe
+        une_data = df[df['une_nome'] == une_nome]
+        if une_data.empty:
+            unes_disponiveis = df['une_nome'].unique()
+            return {
+                "error": f"UNE {une_nome} não encontrada",
+                "type": "error",
+                "suggestion": f"UNEs disponíveis: {', '.join(unes_disponiveis[:10])}"
+            }
+
+        # Calcular total de vendas da UNE no mês específico
+        if coluna_mes not in df.columns:
+            return {"error": f"Dados de vendas para {mes_nome} não disponíveis", "type": "error"}
+
+        total_vendas_mes = float(une_data[coluna_mes].sum())
+        total_produtos = len(une_data[une_data[coluna_mes] > 0])
+
+        return {
+            "type": "vendas_une_mes",
+            "title": f"Vendas da UNE {une_nome} em {mes_nome.title()}",
+            "result": {
+                "une_nome": une_nome,
+                "mes_nome": mes_nome.title(),
+                "total_vendas": total_vendas_mes,
+                "total_produtos": total_produtos,
+                "media_por_produto": total_vendas_mes / total_produtos if total_produtos > 0 else 0
+            },
+            "summary": f"UNE {une_nome} vendeu {total_vendas_mes:,.0f} unidades em {mes_nome.title()}.",
+            "tokens_used": 0
+        }
+
+    def _query_ranking_vendas_unes(self, df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Query: Ranking de vendas totais por UNE."""
+        if 'vendas_total' not in df.columns:
+            return {"error": "Dados de vendas não disponíveis", "type": "error"}
+
+        # Agrupar por UNE e somar todas as vendas
+        vendas_por_une = df.groupby(['une', 'une_nome']).agg({
+            'vendas_total': 'sum'
+        }).reset_index()
+
+        # Ordenar por vendas totais (decrescente)
+        vendas_por_une = vendas_por_une.sort_values('vendas_total', ascending=False)
+
+        # Preparar dados para gráfico
+        x_data = [f"{row['une_nome']}\n(UNE {row['une']})" for _, row in vendas_por_une.iterrows()]
+        y_data = [float(row['vendas_total']) for _, row in vendas_por_une.iterrows()]
+
+        # Cores baseadas na performance
+        max_vendas = max(y_data) if y_data else 1
+        colors = []
+        for valor in y_data:
+            if valor >= max_vendas * 0.7:
+                colors.append('#2E8B57')  # Verde escuro para top performers
+            elif valor >= max_vendas * 0.3:
+                colors.append('#FFD700')  # Dourado para performance média
+            else:
+                colors.append('#CD5C5C')  # Vermelho suave para baixa performance
+
+        # Criar dados do gráfico
+        chart_data = {
+            "x": x_data,
+            "y": y_data,
+            "type": "bar",
+            "colors": colors,
+            "show_values": True,
+            "height": max(400, min(800, len(x_data) * 60)),
+            "margin": {"l": 80, "r": 80, "t": 100, "b": 120}
+        }
+
+        total_vendas_geral = sum(y_data)
+
+        return {
+            "type": "chart",
+            "title": "Ranking de Vendas por UNE",
+            "result": {
+                "chart_data": chart_data,
+                "unes": len(vendas_por_une),
+                "total_vendas": total_vendas_geral,
+                "melhor_une": vendas_por_une.iloc[0]['une_nome'] if len(vendas_por_une) > 0 else None,
+                "vendas_melhor": vendas_por_une.iloc[0]['vendas_total'] if len(vendas_por_une) > 0 else 0
+            },
+            "summary": f"Ranking de {len(vendas_por_une)} UNEs. Melhor: {vendas_por_une.iloc[0]['une_nome'] if len(vendas_por_une) > 0 else 'N/A'} com {vendas_por_une.iloc[0]['vendas_total'] if len(vendas_por_une) > 0 else 0:,.0f} vendas.",
+            "tokens_used": 0
+        }
+
+    def _query_produto_mais_vendido_cada_une(self, df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Query: Produto mais vendido em cada UNE."""
+        if 'vendas_total' not in df.columns or 'une_nome' not in df.columns:
+            return {"error": "Dados de vendas/UNE não disponíveis", "type": "error"}
+
+        # Encontrar o produto mais vendido por UNE
+        produtos_por_une = []
+
+        # Agrupar por UNE
+        for une_nome in df['une_nome'].unique():
+            une_data = df[df['une_nome'] == une_nome]
+
+            # Encontrar produto mais vendido desta UNE
+            produto_top = une_data.loc[une_data['vendas_total'].idxmax()]
+
+            produtos_por_une.append({
+                'une_nome': une_nome,
+                'produto_codigo': produto_top['codigo'],
+                'produto_nome': produto_top['nome_produto'],
+                'vendas_total': produto_top['vendas_total']
+            })
+
+        # Ordenar por vendas (descendente)
+        produtos_por_une.sort(key=lambda x: x['vendas_total'], reverse=True)
+
+        # Preparar dados para gráfico
+        x_data = [f"{item['une_nome']}" for item in produtos_por_une]
+        y_data = [float(item['vendas_total']) for item in produtos_por_une]
+
+        # Cores baseadas na performance
+        max_vendas = max(y_data) if y_data else 1
+        colors = []
+        for valor in y_data:
+            if valor >= max_vendas * 0.7:
+                colors.append('#2E8B57')  # Verde escuro para top performers
+            elif valor >= max_vendas * 0.3:
+                colors.append('#FFD700')  # Dourado para performance média
+            else:
+                colors.append('#CD5C5C')  # Vermelho suave para baixa performance
+
+        # Criar dados do gráfico
+        chart_data = {
+            "x": x_data,
+            "y": y_data,
+            "type": "bar",
+            "colors": colors,
+            "show_values": True,
+            "height": max(400, min(800, len(x_data) * 60)),
+            "margin": {"l": 80, "r": 80, "t": 100, "b": 120}
+        }
+
+        return {
+            "type": "chart",
+            "title": "Produto Mais Vendido em Cada UNE",
+            "result": {
+                "chart_data": chart_data,
+                "produtos_por_une": produtos_por_une,
+                "total_unes": len(produtos_por_une),
+                "melhor_produto_geral": produtos_por_une[0] if produtos_por_une else None
+            },
+            "summary": f"Produtos mais vendidos em {len(produtos_por_une)} UNEs. Líder geral: {produtos_por_une[0]['produto_nome'] if produtos_por_une else 'N/A'} na UNE {produtos_por_une[0]['une_nome'] if produtos_por_une else 'N/A'} com {produtos_por_une[0]['vendas_total'] if produtos_por_une else 0:,.0f} vendas.",
             "tokens_used": 0
         }
 
