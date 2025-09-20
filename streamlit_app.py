@@ -99,42 +99,60 @@ def main_app():
     """, unsafe_allow_html=True)
 
     st.header("💬 Faça sua Consulta")
-    query_input = st.text_input(
-        "Digite sua pergunta sobre os dados:",
-        value=st.session_state.get('selected_query', ''),
-        placeholder="Ex: gere um gráfico de vendas do produto 59294"
-    )
+    
+    # Usando st.form para controlar a submissão da consulta
+    with st.form("query_form", clear_on_submit=True):
+        query_input = st.text_input(
+            "Digite sua pergunta sobre os dados:",
+            value=st.session_state.get('selected_query', ''),
+            placeholder="Ex: gere um gráfico de vendas do produto 59294",
+            key="query_text_input" # Adiciona uma chave para o input
+        )
+        submitted = st.form_submit_button("Perguntar", use_container_width=True)
 
-    if query_input:
-        spinner_text = "🔍 Processando consulta..."
-        with st.spinner(spinner_text):
-            try:
-                logger.info(f"PROCESSANDO CONSULTA USUÁRIO: '{query_input}'")
-                query_type, params = query_engine.classify_intent_direct(query_input)
-                logger.info(f"CLASSIFICADO COMO: {query_type} | Params: {params}")
+        logger.debug(f"Form submitted: {submitted}, Query Input: '{query_input}'")
+        st.write(f"Submitted: {submitted}, Query: '{query_input}'") # DEBUG LINE
 
-                cached_result = cache.get(query_type, params)
-                if cached_result:
-                    logger.info(f"RESULTADO DO CACHE: {query_type}")
-                    st.success("⚡ Resultado obtido do cache (0 tokens LLM)")
-                    result = cached_result
-                    log_query_attempt(query_input, query_type, params, True, None)
-                else:
-                    logger.info(f"EXECUTANDO CONSULTA NOVA: {query_type}")
-                    result = query_engine.process_query(query_input)
-                    if result.get('type') != 'error':
-                        cache.set(query_type, params, result, tokens_would_use=150)
-                        logger.info(f"RESULTADO SALVO NO CACHE: {query_type}")
-                
-                logger.info(f"EXIBINDO RESULTADO: {result.get('type', 'N/A')} - {result.get('title', 'N/A')}")
-                display_result(result)
+        if submitted and query_input:
+            # Limpa o selected_query após a submissão para evitar re-processamento
+            st.session_state.selected_query = '' 
+            
+            spinner_text = "🔍 Processando consulta..."
+            with st.spinner(spinner_text):
+                try:
+                    logger.info(f"PROCESSANDO CONSULTA USUÁRIO: '{query_input}'")
+                    query_type, params = query_engine.classify_intent_direct(query_input)
+                    logger.info(f"CLASSIFICADO COMO: {query_type} | Params: {params}")
 
-            except Exception as e:
-                error_msg = str(e)
-                logger.error(f"ERRO CRÍTICO NO STREAMLIT: {error_msg}")
-                log_critical_error(e, "streamlit_query_processing", {"user_query": query_input})
-                st.error(f"Erro ao processar consulta: {error_msg}")
-                logger.error(f"TRACEBACK COMPLETO: {traceback.format_exc()}")
+                    cached_result = cache.get(query_type, params)
+                    if cached_result:
+                        logger.info(f"RESULTADO DO CACHE: {query_type}")
+                        st.success("⚡ Resultado obtido do cache (0 tokens LLM)")
+                        result = cached_result
+                        log_query_attempt(query_input, query_type, params, True, None)
+                    else:
+                        logger.info(f"EXECUTANDO CONSULTA NOVA: {query_type}")
+                        result = query_engine.process_query(query_input)
+                        if result.get('type') != 'error':
+                            cache.set(query_type, params, result, tokens_would_use=150)
+                            logger.info(f"RESULTADO SALVO NO CACHE: {query_type}")
+                    
+                    logger.info(f"RESULTADO FINAL DO PROCESSAMENTO: {result}")
+                    st.session_state.last_query_result = result # Persiste o resultado
+
+                except Exception as e:
+                    error_msg = str(e)
+                    logger.error(f"ERRO CRÍTICO NO STREAMLIT: {error_msg}")
+                    log_critical_error(e, "streamlit_query_processing", {"user_query": query_input})
+                    st.error(f"Erro ao processar consulta: {error_msg}")
+                    logger.error(f"TRACEBACK COMPLETO: {traceback.format_exc()}")
+        
+    # Exibir o resultado da última consulta se houver
+    # Isso é útil para manter o resultado na tela após o rerun do form
+    if 'last_query_result' in st.session_state and st.session_state.last_query_result:
+        display_result(st.session_state.last_query_result)
+    elif submitted and not query_input: # Caso o botão seja clicado sem texto
+        st.warning("Por favor, digite sua pergunta antes de clicar em 'Perguntar'.")
 
     admin_panel(cache, query_engine, parquet_adapter)
 
