@@ -7,13 +7,14 @@ from langchain_core.messages import HumanMessage # Import HumanMessage
 # Import the functions to be tested
 from core.agents.bi_agent_nodes import (
     classify_intent,
-    generate_sql_query,
+    generate_parquet_query,
     execute_query,
     format_final_response,
 )
 from core.agent_state import AgentState
 from core.tools.data_tools import fetch_data_from_query # Import the actual function
 
+from core.connectivity.parquet_adapter import ParquetAdapter # Import ParquetAdapter
 from core.connectivity.base import DatabaseAdapter # Import DatabaseAdapter
 
 # Mock the adapters
@@ -61,24 +62,27 @@ class TestAgentNodes(unittest.TestCase):
         
         self.assertEqual(result["intent"], "resposta_simples")
 
-    def test_generate_sql_query(self):
+    def test_generate_parquet_query(self):
         """
-        Testa a geração de SQL.
+        Testa a geração de filtros para Parquet.
         """
-        mock_db_adapter.get_schema.return_value = {"tables": ["ADMAT"]}
+        mock_parquet_adapter = MagicMock(spec=ParquetAdapter)
+        mock_parquet_adapter.get_schema.return_value = {"schema": "dummy_schema"}
+        
         mock_llm_adapter.get_completion.return_value = {
-            "content": "SELECT preco FROM ADMAT WHERE produto = 369947"
+            "content": '{"codigo": 369947}'
         }
         
         initial_state: AgentState = {
             "messages": [HumanMessage(content="qual é o preço do produto 369947")]
         }
         
-        result = generate_sql_query(initial_state, mock_llm_adapter, mock_db_adapter)
+        result = generate_parquet_query(initial_state, mock_llm_adapter, mock_parquet_adapter)
         
-        self.assertIn("sql_query", result)
-        self.assertTrue("SELECT" in result["sql_query"])
-        mock_db_adapter.get_schema.assert_called_once()
+        self.assertIn("parquet_filters", result)
+        self.assertIsInstance(result["parquet_filters"], dict)
+        self.assertEqual(result["parquet_filters"]["codigo"], 369947)
+        mock_parquet_adapter.get_schema.assert_called_once()
 
     def test_execute_query(self):
         """
@@ -92,18 +96,18 @@ class TestAgentNodes(unittest.TestCase):
         """
         Testa a execução da query diretamente no nó execute_query.
         """
-        # Mock the invoke method of the patched tool
         mock_fetch_data_tool.invoke.return_value = [{"test": "data"}]
         
         initial_state: AgentState = {
-            "messages": [],
-            "sql_query": "SELECT * FROM TEST"
+            "messages": [HumanMessage(content="test query")],
+            "parquet_filters": {"column": "value"}
         }
         
-        result = execute_query(initial_state, mock_db_adapter)
+        mock_parquet_adapter = MagicMock(spec=ParquetAdapter)
         
-        # Assert that the invoke method was called
-        mock_fetch_data_tool.invoke.assert_called_once_with({"query": "SELECT * FROM TEST", "db_adapter": mock_db_adapter})
+        result = execute_query(initial_state, mock_parquet_adapter)
+        
+        mock_fetch_data_tool.invoke.assert_called_once_with({"query_filters": {"column": "value"}, "parquet_adapter": mock_parquet_adapter})
         self.assertEqual(result["retrieved_data"], [{"test": "data"}])
 
     def test_format_final_response_data(self):
