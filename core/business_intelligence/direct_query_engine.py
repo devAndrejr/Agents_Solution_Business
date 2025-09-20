@@ -603,9 +603,10 @@ class DirectQueryEngine:
                 "type": "error"
             }
 
-        # Agrupar por produto para evitar duplicatas e somar vendas
-        produtos_agrupados = produtos_une.groupby(['codigo', 'nome_produto']).agg({
+        # Agrupar apenas por código (mais eficiente) e somar vendas
+        produtos_agrupados = produtos_une.groupby('codigo').agg({
             'vendas_total': 'sum',
+            'nome_produto': 'first',
             'preco_38_percent': 'first',
             'nomesegmento': 'first'
         }).reset_index()
