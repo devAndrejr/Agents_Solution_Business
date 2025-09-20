@@ -32,44 +32,20 @@ except Exception as e:
 
 # Configuração de logging avançado
 from core.utils.logger_config import get_logger, log_query_attempt, log_critical_error
+from core.auth import login as render_login_screen, sessao_expirada
 
 logger = get_logger('agent_bi.streamlit')
 
 # --- Funções de Autenticação e Layout ---
 
-def check_admin_login():
-    """Verifica se o usuário está logado como admin."""
-    return st.session_state.get('admin_logged_in', False)
-
-def login_screen():
-    """Exibe a tela de login centralizada."""
-    st.markdown("<style>div[data-testid='stVerticalBlock'] {gap: 0.5rem;}</style>", unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="main-header">
-        <h1>AGENT SOLUTIONS BUSINESS</h1>
-        <p>Sistema de Business Intelligence</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns([1, 1.5, 1])
-    with col2:
-        with st.form("login_form"):
-            st.subheader("🔐 Acesso Restrito")
-            admin_password = st.text_input("Senha de Acesso:", type="password", key="admin_pass")
-            submitted = st.form_submit_button("Entrar", use_container_width=True)
-
-            if submitted:
-                correct_hash = "e99a18c428cb38d5f260853678922e03"  # Hash de "admin123"
-                if admin_password:
-                    password_hash = hashlib.md5(admin_password.encode()).hexdigest()
-                    if password_hash == correct_hash:
-                        st.session_state.admin_logged_in = True
-                        st.rerun()
-                    else:
-                        st.error("❌ Senha incorreta")
-                else:
-                    st.warning("❌ Por favor, digite a senha")
+def check_user_login():
+    """Verifica se o usuário está logado e se a sessão não expirou."""
+    if sessao_expirada():
+        st.session_state.authenticated = False
+        st.session_state.username = None
+        st.session_state.role = None
+        return False
+    return st.session_state.get('authenticated', False)
 
 def main_app():
     """Renderiza a aplicação principal após o login."""
@@ -192,6 +168,37 @@ def main():
         main_app()
     else:
         login_screen()
+
+if __name__ == "__main__":
+    main()y ---
+
+def admin_panel(cache, query_engine, parquet_adapter):
+    """Painel administrativo com informações detalhadas."""
+    st.markdown("---")
+    st.header("🛠️ Painel Administrativo")
+    # ... (código do admin_panel)
+
+def display_result(result: Dict[str, Any]):
+    """Exibe resultado da consulta com gráficos."""
+    # ... (código do display_result)
+
+def create_simple_chart(result: Dict[str, Any]):
+    """Cria gráfico melhorado baseado no tipo de resultado."""
+    # ... (código do create_simple_chart)
+
+# --- Inicialização e Controle de Fluxo ---
+
+@st.cache_resource
+def init_system():
+    """Inicializa sistema com cache."""
+    # ... (código do init_system)
+
+def main():
+    """Função principal que controla o fluxo de login e a aplicação."""
+    if check_user_login():
+        main_app()
+    else:
+        render_login_screen()
 
 if __name__ == "__main__":
     main()
