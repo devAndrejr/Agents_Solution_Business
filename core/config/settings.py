@@ -19,11 +19,14 @@ class Settings(BaseSettings):
     DB_NAME: str
     DB_USER: str
     DB_PASSWORD: SecretStr
-    DB_DRIVER: str = "{ODBC Driver 17 for SQL Server}" # Valor padrão comum
-    DB_TRUST_SERVER_CERTIFICATE: bool = False
+    DB_DRIVER: str = "ODBC Driver 17 for SQL Server" # Valor padrão comum
+    DB_TRUST_SERVER_CERTIFICATE: bool = True
 
     # Chave da API para o LLM
     OPENAI_API_KEY: SecretStr
+
+    # Modelo LLM
+    LLM_MODEL_NAME: str = "gpt-4o"
     
     @computed_field
     @property
