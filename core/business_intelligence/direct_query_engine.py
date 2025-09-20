@@ -230,6 +230,13 @@ class DirectQueryEngine:
                 logger.info(f"CLASSIFICADO COMO: produto_mais_vendido_cada_une")
                 return result
 
+            # ALTA PRIORIDADE: Detectar consultas de PRODUTO MAIS VENDIDO EM TODAS AS UNES
+            produto_todas_unes_match = re.search(r'produto\s*mais\s*vendido.*(todas?\s*unes?|todas?\s*as\s*unes?|em\s*todas?\s*unes?)', query_lower)
+            if produto_todas_unes_match:
+                result = ("produto_mais_vendido_cada_une", {})  # Usar o mesmo método
+                logger.info(f"CLASSIFICADO COMO: produto_mais_vendido_cada_une (todas as UNEs)")
+                return result
+
             # CORREÇÃO: Detectar GRÁFICO DE BARRAS para produto em TODAS AS UNEs (MAIOR PRIORIDADE)
             product_all_unes_match = re.search(r'(gr[áa]fico.*barras?|barras?).*produto\s*(\d{5,7}).*(todas.*unes?|todas.*filiais?)', query_lower)
             if product_all_unes_match:
