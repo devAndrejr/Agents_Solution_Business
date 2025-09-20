@@ -25,6 +25,7 @@ try:
     from core.connectivity.parquet_adapter import ParquetAdapter
     from core.business_intelligence.direct_query_engine import DirectQueryEngine
     from core.business_intelligence.smart_cache import SmartCache
+    from core.auth import login as render_login_screen, sessao_expirada
     SYSTEM_AVAILABLE = True
 except Exception as e:
     st.error(f"Erro ao carregar sistema: {e}")
@@ -32,7 +33,6 @@ except Exception as e:
 
 # Configuração de logging avançado
 from core.utils.logger_config import get_logger, log_query_attempt, log_critical_error
-from core.auth import login as render_login_screen, sessao_expirada
 
 logger = get_logger('agent_bi.streamlit')
 
@@ -68,7 +68,9 @@ def main_app():
         st.markdown("---")
 
         if st.button("🔒 Sair (Logout)", use_container_width=True):
-            st.session_state.admin_logged_in = False
+            st.session_state.authenticated = False
+            st.session_state.username = None
+            st.session_state.role = None
             st.rerun()
 
         st.markdown("---")
@@ -142,6 +144,7 @@ def admin_panel(cache, query_engine, parquet_adapter):
     """Painel administrativo com informações detalhadas."""
     st.markdown("---")
     st.header("🛠️ Painel Administrativo")
+    admin_tabs = st.tabs(["📊 Estatísticas Detalhadas", "🔧 Configurações", "🐛 Debug", "💾 Cache Management", "📋 Logs do Sistema"])
     # ... (código do admin_panel)
 
 def display_result(result: Dict[str, Any]):
@@ -157,41 +160,33 @@ def create_simple_chart(result: Dict[str, Any]):
 @st.cache_resource
 def init_system():
     """Inicializa sistema com cache."""
-    # ... (código do init_system)
-
-def main():
-    """Função principal que controla o fluxo de login e a aplicação."""
-    if 'admin_logged_in' not in st.session_state:
-        st.session_state.admin_logged_in = False
-
-    if check_admin_login():
-        main_app()
-    else:
-        login_screen()
-
-if __name__ == "__main__":
-    main()y ---
-
-def admin_panel(cache, query_engine, parquet_adapter):
-    """Painel administrativo com informações detalhadas."""
-    st.markdown("---")
-    st.header("🛠️ Painel Administrativo")
-    # ... (código do admin_panel)
-
-def display_result(result: Dict[str, Any]):
-    """Exibe resultado da consulta com gráficos."""
-    # ... (código do display_result)
-
-def create_simple_chart(result: Dict[str, Any]):
-    """Cria gráfico melhorado baseado no tipo de resultado."""
-    # ... (código do create_simple_chart)
-
-# --- Inicialização e Controle de Fluxo ---
-
-@st.cache_resource
-def init_system():
-    """Inicializa sistema com cache."""
-    # ... (código do init_system)
+    if not SYSTEM_AVAILABLE:
+        return None, None, None
+    try:
+        parquet_paths = [
+            "data/parquet/admmat.parquet",
+            "/mount/src/agents_solution_business/data/parquet/admmat.parquet",
+            "./data/parquet/admmat.parquet"
+        ]
+        parquet_adapter = None
+        for path in parquet_paths:
+            try:
+                parquet_adapter = ParquetAdapter(path)
+                if check_user_login():
+                    st.success(f"✅ Dataset carregado: {path}")
+                break
+            except FileNotFoundError:
+                continue
+        if parquet_adapter is None:
+            st.error("❌ Arquivo parquet não encontrado")
+            return None, None, None
+        cache = SmartCache(cache_dir="cache", max_size_mb=50)
+        query_engine = DirectQueryEngine(parquet_adapter)
+        cache.preload_frequent_queries(parquet_adapter)
+        return parquet_adapter, query_engine, cache
+    except Exception as e:
+        st.error(f"Erro na inicialização: {e}")
+        return None, None, None
 
 def main():
     """Função principal que controla o fluxo de login e a aplicação."""
