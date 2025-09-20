@@ -243,22 +243,50 @@ else:
 
         with st.spinner("O agente está a pensar..."):
             try:
-                if not backend_components or not backend_components.get("agent_graph"):
-                    # Fallback: resposta simples se backend não disponível
-                    agent_response = {
-                        "type": "text",
-                        "content": f"⚠️ Sistema está sendo inicializado. Tente novamente em alguns segundos.\n\nSe o problema persistir, contate o administrador.",
-                        "user_query": user_input
-                    }
-                else:
-                    # Usar backend integrado (similar ao main.py)
-                    initial_state = {"messages": [HumanMessage(content=user_input)]}
-                    final_state = backend_components["agent_graph"].invoke(initial_state)
-                    agent_response = final_state.get("final_response", {})
+                # 🚀 PRIORIDADE: Tentar DirectQueryEngine primeiro (mais rápido e eficiente)
+                try:
+                    from core.business_intelligence.direct_query_engine import DirectQueryEngine
+                    from core.connectivity.parquet_adapter import ParquetAdapter
 
-                    # Garantir que a resposta inclui informações da pergunta
-                    if "user_query" not in agent_response:
-                        agent_response["user_query"] = user_input
+                    adapter = ParquetAdapter('data/parquet/admmat.parquet')
+                    engine = DirectQueryEngine(adapter)
+
+                    # Processar com DirectQueryEngine
+                    direct_result = engine.process_query(user_input)
+
+                    # Se obteve resultado válido, usar diretamente
+                    if direct_result and not direct_result.get("error"):
+                        agent_response = {
+                            "type": direct_result.get("type", "text"),
+                            "title": direct_result.get("title", ""),
+                            "content": direct_result.get("summary", ""),
+                            "result": direct_result.get("result", {}),
+                            "user_query": user_input,
+                            "method": "direct_query",
+                            "processing_time": direct_result.get("processing_time", 0)
+                        }
+                    else:
+                        # Se DirectQueryEngine falhou, usar agent_graph como fallback
+                        raise Exception("DirectQueryEngine não conseguiu processar a consulta")
+
+                except Exception as direct_error:
+                    # Fallback para agent_graph se DirectQueryEngine falhar
+                    if not backend_components or not backend_components.get("agent_graph"):
+                        # Fallback: resposta simples se backend não disponível
+                        agent_response = {
+                            "type": "text",
+                            "content": f"⚠️ Sistema está sendo inicializado. Tente novamente em alguns segundos.\n\nSe o problema persistir, contate o administrador.",
+                            "user_query": user_input
+                        }
+                    else:
+                        # Usar backend integrado (similar ao main.py)
+                        initial_state = {"messages": [HumanMessage(content=user_input)]}
+                        final_state = backend_components["agent_graph"].invoke(initial_state)
+                        agent_response = final_state.get("final_response", {})
+
+                        # Garantir que a resposta inclui informações da pergunta
+                        if "user_query" not in agent_response:
+                            agent_response["user_query"] = user_input
 
                 # ✅ GARANTIR estrutura correta da resposta
                 assistant_message = {"role": "assistant", "content": agent_response}
