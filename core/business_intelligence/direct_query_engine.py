@@ -569,6 +569,196 @@ class DirectQueryEngine:
 
         # Regex para encontrar colunas de vendas mensais (ex: 'mai-23', 'jun/23', 'mes_01', 'jan-24')
         sales_cols_re = re.compile(r'^(?:[a-z]{3}[-/]\d{2,4}|mes_\d{1,2})
+        """Fallback para queries não implementadas."""
+        return {
+            "type": "not_implemented",
+            "title": "Consulta Não Implementada",
+            "result": {"message": f"Query tipo '{query_type}' ainda não implementada"},
+            "summary": f"Esta consulta específica ainda não foi implementada. Use uma das consultas básicas disponíveis.",
+            "tokens_used": 0,
+            "available_queries": list(self.keywords_map.keys())[:10]
+        }
+
+    def process_query(self, user_query: str) -> Dict[str, Any]:
+        """Processa query completa: classifica + executa SEM usar LLM."""
+        start_time = datetime.now()
+
+        # Classificar intenção SEM LLM
+        query_type, params = self.classify_intent_direct(user_query)
+
+        # Executar consulta direta
+        result = self.execute_direct_query(query_type, params)
+
+        # Adicionar metadados
+        result['query_original'] = user_query
+        result['query_type'] = query_type
+        result['processing_time'] = (datetime.now() - start_time).total_seconds()
+        result['method'] = 'direct_query'  # Indica que NÃO usou LLM
+
+        logger.info(f"Query processada em {result['processing_time']:.2f}s - ZERO tokens LLM")
+
+        return result
+
+    def get_available_queries(self) -> List[Dict[str, str]]:
+        """Retorna lista de consultas disponíveis para sugestões."""
+        return [
+            {"keyword": keyword, "description": f"Executa consulta: {query_type}"}
+            for keyword, query_type in list(self.keywords_map.items())[:20]
+        ]
+, re.IGNORECASE)
+        sales_cols = [col for col in df.columns if sales_cols_re.match(col)]
+
+        if not sales_cols:
+            return {"error": "Nenhuma coluna de vendas mensais encontrada no formato esperado.", "type": "error"}
+
+        # Mapear nomes de meses para números
+        month_map = {
+            'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+            'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
+        }
+
+        sales_timeseries = []
+        product_sales_series = produto_data[sales_cols].iloc[0]
+
+        for col_name, sales_value in product_sales_series.items():
+            try:
+                clean_col = col_name.lower().replace('/', '-')
+                
+                if clean_col.startswith('mes_'):
+                    # Ignorar colunas 'mes_xx' pois não temos o ano
+                    continue
+
+                month_str, year_str = clean_col.split('-')
+                month = month_map[month_str[:3]]
+                year = int(year_str)
+                if year < 100: # Formato '23' -> 2023
+                    year += 2000
+                
+                sales_timeseries.append({
+                    "date": datetime(year, month, 1),
+                    "mes": f"{month:02d}/{year}",
+                    "vendas": float(sales_value) if pd.notna(sales_value) else 0
+                })
+            except (ValueError, KeyError) as e:
+                logger.warning(f"Não foi possível processar a coluna de data '{col_name}': {e}")
+                continue
+        
+        if not sales_timeseries:
+            return {"error": "Não foi possível extrair dados de série temporal de vendas para o produto.", "type": "error"}
+
+        # Ordenar por data
+        sales_timeseries.sort(key=lambda x: x['date'])
+
+        total_vendas = sum(item['vendas'] for item in sales_timeseries)
+
+        return {
+            "type": "evolucao_vendas_produto",
+            "title": f"Evolução de Vendas - {produto_nome} ({produto_codigo})",
+            "result": {
+                "produto_codigo": produto_codigo,
+                "produto_nome": produto_nome,
+                "vendas_timeseries": sales_timeseries,
+                "total_vendas": total_vendas
+            },
+            "summary": f"O produto '{produto_nome}' teve um total de {total_vendas:,.0f} vendas no período analisado.",
+            "tokens_used": 0
+        }
+
+    def _query_fallback(self, df: pd.DataFrame, query_type: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Fallback para queries não implementadas."""
+        return {
+            "type": "not_implemented",
+            "title": "Consulta Não Implementada",
+            "result": {"message": f"Query tipo '{query_type}' ainda não implementada"},
+            "summary": f"Esta consulta específica ainda não foi implementada. Use uma das consultas básicas disponíveis.",
+            "tokens_used": 0,
+            "available_queries": list(self.keywords_map.keys())[:10]
+        }
+
+    def process_query(self, user_query: str) -> Dict[str, Any]:
+        """Processa query completa: classifica + executa SEM usar LLM."""
+        start_time = datetime.now()
+
+        # Classificar intenção SEM LLM
+        query_type, params = self.classify_intent_direct(user_query)
+
+        # Executar consulta direta
+        result = self.execute_direct_query(query_type, params)
+
+        # Adicionar metadados
+        result['query_original'] = user_query
+        result['query_type'] = query_type
+        result['processing_time'] = (datetime.now() - start_time).total_seconds()
+        result['method'] = 'direct_query'  # Indica que NÃO usou LLM
+
+        logger.info(f"Query processada em {result['processing_time']:.2f}s - ZERO tokens LLM")
+
+        return result
+
+    def get_available_queries(self) -> List[Dict[str, str]]:
+        """Retorna lista de consultas disponíveis para sugestões."""
+        return [
+            {"keyword": keyword, "description": f"Executa consulta: {query_type}"}
+            for keyword, query_type in list(self.keywords_map.items())[:20]
+        ]
+, re.IGNORECASE)
+        sales_cols = [col for col in df.columns if sales_cols_re.match(col)]
+
+        if not sales_cols:
+            return {"error": "Nenhuma coluna de vendas mensais encontrada no formato esperado.", "type": "error"}
+
+        # Mapear nomes de meses para números
+        month_map = {
+            'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+            'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
+        }
+
+        sales_timeseries = []
+        product_sales_series = produto_data[sales_cols].iloc[0]
+
+        for col_name, sales_value in product_sales_series.items():
+            try:
+                clean_col = col_name.lower().replace('/', '-')
+                
+                if clean_col.startswith('mes_'):
+                    # Ignorar colunas 'mes_xx' pois não temos o ano
+                    continue
+
+                month_str, year_str = clean_col.split('-')
+                month = month_map[month_str[:3]]
+                year = int(year_str)
+                if year < 100: # Formato '23' -> 2023
+                    year += 2000
+                
+                sales_timeseries.append({
+                    "date": datetime(year, month, 1),
+                    "mes": f"{month:02d}/{year}",
+                    "vendas": float(sales_value) if pd.notna(sales_value) else 0
+                })
+            except (ValueError, KeyError) as e:
+                logger.warning(f"Não foi possível processar a coluna de data '{col_name}': {e}")
+                continue
+        
+        if not sales_timeseries:
+            return {"error": "Não foi possível extrair dados de série temporal de vendas para o produto.", "type": "error"}
+
+        # Ordenar por data
+        sales_timeseries.sort(key=lambda x: x['date'])
+
+        total_vendas = sum(item['vendas'] for item in sales_timeseries)
+
+        return {
+            "type": "evolucao_vendas_produto",
+            "title": f"Evolução de Vendas - {produto_nome} ({produto_codigo})",
+            "result": {
+                "produto_codigo": produto_codigo,
+                "produto_nome": produto_nome,
+                "vendas_timeseries": sales_timeseries,
+                "total_vendas": total_vendas
+            },
+            "summary": f"O produto '{produto_nome}' teve um total de {total_vendas:,.0f} vendas no período analisado.",
+            "tokens_used": 0
+        }
 
     def _query_fallback(self, df: pd.DataFrame, query_type: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """Fallback para queries não implementadas."""
