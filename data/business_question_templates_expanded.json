@@ -4,7 +4,7 @@
     "description": "Templates das 20 perguntas essenciais + 80 perguntas específicas do arquivo exemplos_perguntas_negocio.md",
     "created": "2025-09-19",
     "version": "2.0",
-    "dataset": "admatao_full.parquet",
+    "dataset": "admmat.parquet",
     "total_questions": 100,
     "essential_questions": 20,
     "specific_questions": 80

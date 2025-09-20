@@ -205,9 +205,9 @@ def init_system():
     try:
         # Buscar arquivo parquet em múltiplos locais
         parquet_paths = [
-            "data/parquet/admatao_full.parquet",
-            "/mount/src/agents_solution_business/data/parquet/admatao_full.parquet",
-            "./data/parquet/admatao_full.parquet"
+            "data/parquet/admmat.parquet",
+            "/mount/src/agents_solution_business/data/parquet/admmat.parquet",
+            "./data/parquet/admmat.parquet"
         ]
 
         parquet_adapter = None

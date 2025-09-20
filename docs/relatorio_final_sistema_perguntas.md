@@ -3,7 +3,7 @@
 **Data:** 19 de Setembro de 2025
 **Sistema:** Agent_Solution_BI
 **Versão:** 2.0 - Sistema Expandido
-**Dataset:** admatao_full.parquet (1.113.822 registros, 95 colunas)
+**Dataset:** admmat.parquet (1.113.822 registros, 95 colunas)
 
 ---
 

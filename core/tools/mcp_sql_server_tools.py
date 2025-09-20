@@ -7,7 +7,7 @@ import logging
 
 # Caminho para o arquivo Parquet agora aponta para a nova fonte de dados
 PARQUET_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'parquet')
-ADMATAO_PATH = os.path.join(PARQUET_DIR, 'admatao_full.parquet')
+ADMATAO_PATH = os.path.join(PARQUET_DIR, 'admmat.parquet')
 
 @tool
 def get_product_data(product_code: str) -> Dict[str, Any]:

@@ -31,7 +31,7 @@ class ParquetAdapter(DatabaseAdapter):
             essential_cols = ['codigo', 'nome_produto', 'preco_38_percent', 'nomesegmento',
                             'nome_categoria', 'nome_fabricante', 'mes_01', 'mes_02', 'mes_03',
                             'mes_04', 'mes_05', 'mes_06', 'mes_07', 'mes_08', 'mes_09',
-                            'mes_10', 'mes_11', 'mes_12', 'une']
+                            'mes_10', 'mes_11', 'mes_12', 'une', 'une_nome']
 
             try:
                 self._dataframe = pd.read_parquet(self.file_path, columns=essential_cols)
@@ -40,6 +40,17 @@ class ParquetAdapter(DatabaseAdapter):
                 self._dataframe = pd.read_parquet(self.file_path)
 
             logger.info(f"Parquet file loaded. Shape: {self._dataframe.shape}")
+
+            # CRIAR COLUNA VENDAS_TOTAL: Somar vendas de todos os meses
+            vendas_colunas = [f'mes_{i:02d}' for i in range(1, 13)]
+            vendas_colunas_existentes = [col for col in vendas_colunas if col in self._dataframe.columns]
+
+            if vendas_colunas_existentes:
+                logger.info(f"Criando coluna vendas_total com colunas: {vendas_colunas_existentes}")
+                self._dataframe['vendas_total'] = self._dataframe[vendas_colunas_existentes].fillna(0).sum(axis=1)
+                logger.info(f"Coluna vendas_total criada. Min: {self._dataframe['vendas_total'].min()}, Max: {self._dataframe['vendas_total'].max()}")
+            else:
+                logger.warning("Nenhuma coluna de vendas mensal encontrada!")
 
             # Otimizar uso de memória
             self._dataframe = MemoryOptimizer.optimize_dataframe_memory(self._dataframe)

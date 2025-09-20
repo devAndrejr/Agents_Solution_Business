@@ -30,54 +30,153 @@ except Exception as e:
     st.error(f"Erro ao carregar sistema: {e}")
     SYSTEM_AVAILABLE = False
 
-# Configuração de logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configuração de logging avançado
+from core.utils.logger_config import get_logger, log_query_attempt, log_critical_error
+
+logger = get_logger('agent_bi.streamlit')
 
 # Sistema de autenticação admin
 def check_admin_login():
     """Verifica se o usuário está logado como admin."""
-    if 'admin_logged_in' not in st.session_state:
-        st.session_state.admin_logged_in = False
-    return st.session_state.admin_logged_in
+    return st.session_state.get('admin_logged_in', False)
 
-def admin_login_form():
-    """Formulário de login admin."""
-    # Inicializar session_state se não existir
-    if 'admin_logged_in' not in st.session_state:
-        st.session_state.admin_logged_in = False
+def login_screen():
+    """Exibe a tela de login centralizada."""
+    st.markdown("<style>div[data-testid='stVerticalBlock'] {gap: 0.5rem;}</style>", unsafe_allow_html=True)
 
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🔐 Login Admin")
+    st.markdown("""
+    <div class="main-header">
+        <h1>📊 Agent_BI</h1>
+        <p>Sistema de Business Intelligence</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    admin_password = st.sidebar.text_input("Senha Admin:", type="password", key="admin_pass")
+    col1, col2, col3 = st.columns([1, 1.5, 1])
+    with col2:
+        with st.form("login_form"):
+            st.subheader("🔐 Acesso Restrito")
+            admin_password = st.text_input("Senha de Acesso:", type="password", key="admin_pass")
+            submitted = st.form_submit_button("Entrar", use_container_width=True)
 
-    # Senha: "admin123" (hash: e99a18c428cb38d5f260853678922e03)
-    correct_hash = "e99a18c428cb38d5f260853678922e03"
+            if submitted:
+                correct_hash = "e99a18c428cb38d5f260853678922e03"  # Hash de "admin123"
+                if admin_password:
+                    password_hash = hashlib.md5(admin_password.encode()).hexdigest()
+                    if password_hash == correct_hash:
+                        st.session_state.admin_logged_in = True
+                        st.rerun()
+                    else:
+                        st.error("❌ Senha incorreta")
+                else:
+                    st.warning("❌ Por favor, digite a senha")
 
-    if st.sidebar.button("Login Admin"):
-        if admin_password:
-            password_hash = hashlib.md5(admin_password.encode()).hexdigest()
-            if password_hash == correct_hash:
-                st.session_state.admin_logged_in = True
-                st.sidebar.success("✅ Login admin realizado!")
-                st.rerun()
-            else:
-                st.sidebar.error("❌ Senha incorreta")
-        else:
-            st.sidebar.error("❌ Digite a senha")
+def main_app():
+    """Renderiza a aplicação principal após o login."""
+    parquet_adapter, query_engine, cache = init_system()
 
-    if st.session_state.admin_logged_in:
-        if st.sidebar.button("Logout Admin"):
+    if not all([parquet_adapter, query_engine, cache]):
+        st.error("O sistema não está disponível. Verifique a configuração e o arquivo de dados.")
+        if st.button("Tentar Novamente"):
+            st.rerun()
+        return
+
+    # --- BARRA LATERAL ---
+    with st.sidebar:
+        st.markdown("""
+        <div style="padding: 1rem; text-align: center;">
+            <h2>📊 Agent_BI</h2>
+            <p style="font-size: 0.9rem; color: #888;">Menu Principal</p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("---")
+
+        # Botão de logout
+        if st.button("🔒 Sair (Logout)", use_container_width=True):
             st.session_state.admin_logged_in = False
             st.rerun()
+
+        st.markdown("---")
+        cache_stats = cache.get_stats()
+        st.markdown("### 📈 Estatísticas do Cache")
+        st.markdown(f"""
+        <div class="cache-stats">
+            <strong>💰 Economia de Tokens:</strong> {cache_stats['tokens_saved']:,}<br>
+            <strong>🎯 Taxa de Acerto:</strong> {cache_stats['hit_rate_percent']}%<br>
+            <strong>📁 Arquivos em Cache:</strong> {cache_stats['cache_files']}<br>
+            <strong>⚡ Cache em Memória:</strong> {cache_stats['memory_cache_size']}
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button("🗑️ Limpar Cache", use_container_width=True):
+            cache.clear_all()
+            st.success("Cache limpo!")
+            st.rerun()
+
+    # --- CONTEÚDO PRINCIPAL ---
+    st.markdown("""
+    <div class="main-header">
+        <h1>AGENT SOLUTIONS BUSINESS</h1>
+        <p>Business Intelligence com Economia Máxima de LLM</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.header("💬 Faça sua Consulta")
+    query_input = st.text_input(
+        "Digite sua pergunta sobre os dados:",
+        value=st.session_state.get('selected_query', ''),
+        placeholder="Ex: gere um gráfico de vendas do produto 59294"
+    )
+
+    if query_input:
+        spinner_text = "🔍 Processando consulta..."
+        with st.spinner(spinner_text):
+            try:
+                logger.info(f"PROCESSANDO CONSULTA USUÁRIO: '{query_input}'")
+                query_type, params = query_engine.classify_intent_direct(query_input)
+                logger.info(f"CLASSIFICADO COMO: {query_type} | Params: {params}")
+
+                cached_result = cache.get(query_type, params)
+                if cached_result:
+                    logger.info(f"RESULTADO DO CACHE: {query_type}")
+                    st.success("⚡ Resultado obtido do cache (0 tokens LLM)")
+                    result = cached_result
+                    log_query_attempt(query_input, query_type, params, True, None)
+                else:
+                    logger.info(f"EXECUTANDO CONSULTA NOVA: {query_type}")
+                    result = query_engine.process_query(query_input)
+                    if result.get('type') != 'error':
+                        cache.set(query_type, params, result, tokens_would_use=150)
+                        logger.info(f"RESULTADO SALVO NO CACHE: {query_type}")
+                
+                logger.info(f"EXIBINDO RESULTADO: {result.get('type', 'N/A')} - {result.get('title', 'N/A')}")
+                display_result(result)
+
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(f"ERRO CRÍTICO NO STREAMLIT: {error_msg}")
+                log_critical_error(e, "streamlit_query_processing", {"user_query": query_input})
+                st.error(f"Erro ao processar consulta: {error_msg}")
+                logger.error(f"TRACEBACK COMPLETO: {traceback.format_exc()}")
+
+    # Painel Admin (sempre visível para o admin logado)
+    admin_panel(cache, query_engine, parquet_adapter)
+
+def main():
+    """Função principal que controla o fluxo de login e a aplicação."""
+    if 'admin_logged_in' not in st.session_state:
+        st.session_state.admin_logged_in = False
+
+    if check_admin_login():
+        main_app()
+    else:
+        login_screen()
 
 def admin_panel(cache, query_engine, parquet_adapter):
     """Painel administrativo com informações detalhadas."""
     st.markdown("---")
     st.header("🛠️ Painel Administrativo")
 
-    admin_tabs = st.tabs(["📊 Estatísticas Detalhadas", "🔧 Configurações", "🐛 Debug", "💾 Cache Management"])
+    admin_tabs = st.tabs(["📊 Estatísticas Detalhadas", "🔧 Configurações", "🐛 Debug", "💾 Cache Management", "📋 Logs do Sistema"])
 
     with admin_tabs[0]:  # Estatísticas Detalhadas
         st.subheader("📈 Estatísticas Completas do Sistema")
@@ -160,6 +259,87 @@ def admin_panel(cache, query_engine, parquet_adapter):
                 stats = cache.get_stats()
                 st.json(stats)
 
+    with admin_tabs[4]:  # Logs do Sistema
+        st.subheader("📋 Logs do Sistema")
+
+        # Seletor de tipo de log
+        log_type = st.selectbox(
+            "Tipo de Log",
+            ["Consultas (queries.log)", "Erros (errors.log)", "Performance (performance.log)", "Principal (agent_bi_main.log)"]
+        )
+
+        # Número de linhas para exibir
+        num_lines = st.slider("Últimas N linhas", 10, 500, 100)
+
+        if st.button("🔍 Carregar Logs"):
+            try:
+                import os
+                from pathlib import Path
+
+                log_files = {
+                    "Consultas (queries.log)": "logs/queries.log",
+                    "Erros (errors.log)": "logs/errors.log",
+                    "Performance (performance.log)": "logs/performance.log",
+                    "Principal (agent_bi_main.log)": "logs/agent_bi_main.log"
+                }
+
+                log_file = log_files[log_type]
+
+                if os.path.exists(log_file):
+                    with open(log_file, 'r', encoding='utf-8') as f:
+                        lines = f.readlines()
+
+                    # Últimas N linhas
+                    recent_lines = lines[-num_lines:]
+
+                    st.text_area(
+                        f"📋 {log_type} - Últimas {len(recent_lines)} linhas:",
+                        ''.join(recent_lines),
+                        height=400
+                    )
+
+                    # Estatísticas do arquivo
+                    st.info(f"📊 Total de linhas no arquivo: {len(lines)} | Arquivo: {log_file}")
+
+                else:
+                    st.warning(f"⚠️ Arquivo de log não encontrado: {log_file}")
+
+            except Exception as e:
+                st.error(f"❌ Erro ao carregar logs: {e}")
+
+        # Botão para limpar logs
+        if st.button("🗑️ Limpar Todos os Logs"):
+            try:
+                import glob
+                import os
+
+                log_files = glob.glob("logs/*.log")
+                for log_file in log_files:
+                    if os.path.exists(log_file):
+                        open(log_file, 'w').close()  # Limpar arquivo
+
+                st.success(f"✅ {len(log_files)} arquivos de log limpos!")
+
+            except Exception as e:
+                st.error(f"❌ Erro ao limpar logs: {e}")
+
+        # Info sobre logs
+        st.markdown("""
+        **📋 Tipos de Logs Disponíveis:**
+        - **Consultas:** Todas as consultas dos usuários com sucesso/falha
+        - **Erros:** Erros críticos e tracebacks completos
+        - **Performance:** Métricas de tempo de execução
+        - **Principal:** Log geral do sistema
+        """)
+
+        st.markdown("**📁 Localização dos logs:** `logs/` (criados automaticamente)")
+
+        # Atualização automática
+        if st.checkbox("🔄 Atualização Automática (30s)"):
+            import time
+            time.sleep(30)
+            st.rerun()
+
 # CSS customizado para interface moderna
 st.markdown("""
 <style>
@@ -209,9 +389,9 @@ def init_system():
     try:
         # Buscar arquivo parquet em múltiplos locais
         parquet_paths = [
-            "data/parquet/admatao_full.parquet",
-            "/mount/src/agents_solution_business/data/parquet/admatao_full.parquet",
-            "./data/parquet/admatao_full.parquet"
+            "data/parquet/admmat.parquet",
+            "/mount/src/agents_solution_business/data/parquet/admmat.parquet",
+            "./data/parquet/admmat.parquet"
         ]
 
         parquet_adapter = None
@@ -309,27 +489,43 @@ def main():
 
         with st.spinner(spinner_text):
             try:
+                logger.info(f"PROCESSANDO CONSULTA USUÁRIO: '{query_input}'")
+
                 # Verificar cache primeiro
                 query_type, params = query_engine.classify_intent_direct(query_input)
+                logger.info(f"CLASSIFICADO COMO: {query_type} | Params: {params}")
+
                 cached_result = cache.get(query_type, params)
 
                 if cached_result:
+                    logger.info(f"RESULTADO DO CACHE: {query_type}")
                     if check_admin_login():
                         st.success("⚡ Resultado obtido do cache (0 tokens LLM)")
                     result = cached_result
+                    log_query_attempt(query_input, query_type, params, True, None)
                 else:
                     # Executar consulta direta
+                    logger.info(f"EXECUTANDO CONSULTA NOVA: {query_type}")
                     result = query_engine.process_query(query_input)
 
                     # Salvar no cache
                     if result.get('type') != 'error':
                         cache.set(query_type, params, result, tokens_would_use=150)
+                        logger.info(f"RESULTADO SALVO NO CACHE: {query_type}")
 
                 # Exibir resultado
+                logger.info(f"EXIBINDO RESULTADO: {result.get('type', 'N/A')} - {result.get('title', 'N/A')}")
                 display_result(result)
 
             except Exception as e:
-                st.error(f"Erro ao processar consulta: {e}")
+                error_msg = str(e)
+                logger.error(f"ERRO CRÍTICO NO STREAMLIT: {error_msg}")
+                log_critical_error(e, "streamlit_query_processing", {"user_query": query_input})
+                st.error(f"Erro ao processar consulta: {error_msg}")
+
+                # Log adicional para debugging
+                import traceback
+                logger.error(f"TRACEBACK COMPLETO: {traceback.format_exc()}")
 
     # Painel Admin (apenas se logado)
     if check_admin_login():
@@ -397,7 +593,7 @@ def display_result(result: Dict[str, Any]):
         st.plotly_chart(result['chart'], use_container_width=True)
 
     # Criar gráfico simples se não tiver um
-    elif result.get('type') in ['produto_ranking', 'filial_ranking', 'segmento_ranking', 'produto_especifico', 'top_produtos_segmento']:
+    elif result.get('type') in ['produto_ranking', 'filial_ranking', 'segmento_ranking', 'produto_especifico', 'top_produtos_segmento', 'evolucao_vendas_produto']:
         st.markdown("### 📈 Visualização Rápida")
         create_simple_chart(result)
 
@@ -534,4 +730,30 @@ if check_admin_login():
     """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
+    main()
+  )
+            fig.update_layout(height=450)
+            st.plotly_chart(fig, use_container_width=True)
+
+# Controle de sessão
+if 'selected_query' not in st.session_state:
+    st.session_state.selected_query = ''
+
+if 'admin_logged_in' not in st.session_state:
+    st.session_state.admin_logged_in = False
+
+# Footer limpo para clientes
+if check_admin_login():
+    st.markdown("---")
+    st.markdown("""
+    <div style="text-align: center; color: #64748b; font-size: 0.9rem;">
+        🚀 Agent_BI Otimizado - Economia Máxima de LLM |
+        💰 Zero tokens para consultas básicas |
+        ⚡ Cache inteligente ativo
+    </div>
+    """, unsafe_allow_html=True)
+
+if __name__ == "__main__":
+    main()
+:
     main()

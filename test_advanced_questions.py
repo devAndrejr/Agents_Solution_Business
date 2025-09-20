@@ -16,7 +16,7 @@ def main():
 
     try:
         # Carregar dados
-        df = pd.read_parquet('data/parquet/admatao_full.parquet')
+        df = pd.read_parquet('data/parquet/admmat.parquet')
         print(f"Dados carregados: {df.shape[0]} registros, {df.shape[1]} colunas")
 
         # Verificar colunas importantes

@@ -25,7 +25,7 @@ def test_optimized_system():
 
         # 1. Inicializar sistema
         print("\n[ETAPA 1] Inicializando sistema...")
-        parquet_adapter = ParquetAdapter('data/parquet/admatao_full.parquet')
+        parquet_adapter = ParquetAdapter('data/parquet/admmat.parquet')
         parquet_adapter.connect()
         print("OK - ParquetAdapter conectado")
 

@@ -77,7 +77,7 @@ class CodeGenAgent:
         system_message = {
             "role": "system",
             "content": """
-                        Você deve usar o arquivo 'admatao_full.parquet' para todas as consultas de dados.
+                        Você deve usar o arquivo 'admmat.parquet' para todas as consultas de dados.
                         CRÍTICO: Use EXATAMENTE os nomes de colunas fornecidos, respeitando maiúsculas/minúsculas.
             """
         }

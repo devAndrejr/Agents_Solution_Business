@@ -26,7 +26,7 @@ class SimpleBusinessQuestionsTest:
     def load_data(self):
         """Carrega os dados do parquet."""
         try:
-            self.df = pd.read_parquet('../data/parquet/admatao_full.parquet')
+            self.df = pd.read_parquet('../data/parquet/admmat.parquet')
             print(f"✅ Dados carregados: {self.df.shape[0]} registros, {self.df.shape[1]} colunas")
         except Exception as e:
             print(f"❌ Erro ao carregar dados: {e}")

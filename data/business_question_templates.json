@@ -4,7 +4,7 @@
     "description": "Templates das 20 perguntas mais importantes para tomada de decisão",
     "created": "2025-09-19",
     "version": "1.0",
-    "dataset": "admatao_full.parquet",
+    "dataset": "admmat.parquet",
     "viability_rate": "60%"
   },
   "categories": {

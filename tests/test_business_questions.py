@@ -37,7 +37,7 @@ class BusinessQuestionsTest:
         """Configura os componentes do sistema."""
         try:
             # ParquetAdapter
-            self.parquet_adapter = ParquetAdapter('data/parquet/admatao_full.parquet')
+            self.parquet_adapter = ParquetAdapter('data/parquet/admmat.parquet')
             self.parquet_adapter.connect()
 
             # LLM Adapter
