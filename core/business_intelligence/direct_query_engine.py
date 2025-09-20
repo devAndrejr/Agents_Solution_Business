@@ -189,6 +189,15 @@ class DirectQueryEngine:
         try:
             query_lower = user_query.lower()
 
+            # ALTA PRIORIDADE: Detectar consultas de PREÇO de produto em UNE específica
+            preco_produto_une_match = re.search(r'(pre[çc]o|valor|custo).*produto\s*(\d{5,7}).*une\s*([A-Za-z0-9]+)', query_lower)
+            if preco_produto_une_match:
+                produto_codigo = preco_produto_une_match.group(2)
+                une_nome = preco_produto_une_match.group(3).upper()
+                result = ("preco_produto_une_especifica", {"produto_codigo": produto_codigo, "une_nome": une_nome})
+                logger.info(f"CLASSIFICADO COMO: preco_produto_une_especifica (produto: {produto_codigo}, une: {une_nome})")
+                return result
+
             # CORREÇÃO: Detectar GRÁFICO DE BARRAS para produto em TODAS AS UNEs (MAIOR PRIORIDADE)
             product_all_unes_match = re.search(r'(gr[áa]fico.*barras?|barras?).*produto\s*(\d{5,7}).*(todas.*unes?|todas.*filiais?)', query_lower)
             if product_all_unes_match:
@@ -273,7 +282,7 @@ class DirectQueryEngine:
 
         try:
             # 🔧 FIX CRÍTICO: Para consultas específicas de produtos, carregar dataset completo
-            full_dataset_queries = ["consulta_produto_especifico", "consulta_une_especifica", "evolucao_vendas_produto", "produto_vendas_une_barras", "produto_vendas_todas_unes"]
+            full_dataset_queries = ["consulta_produto_especifico", "consulta_une_especifica", "evolucao_vendas_produto", "produto_vendas_une_barras", "produto_vendas_todas_unes", "preco_produto_une_especifica"]
             use_full_dataset = query_type in full_dataset_queries
 
             if use_full_dataset:
@@ -501,6 +510,60 @@ class DirectQueryEngine:
             "title": f"Produto {produto_codigo}",
             "result": produto_info,
             "summary": f"Produto '{produto_info['nome']}' - Vendas: {produto_info['vendas_total']:,.0f} - Preço: R$ {produto_info['preco']:.2f}",
+            "tokens_used": 0
+        }
+
+    def _query_preco_produto_une_especifica(self, df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Query: Preço de produto específico em UNE específica."""
+        produto_codigo = params.get('produto_codigo')
+        une_nome = params.get('une_nome')
+
+        try:
+            produto_codigo = int(produto_codigo)
+        except (ValueError, TypeError):
+            return {"error": f"Código de produto inválido: {produto_codigo}", "type": "error"}
+
+        # Verificar se produto existe na UNE específica
+        produto_une_data = df[(df['codigo'] == produto_codigo) & (df['une_nome'] == une_nome)]
+
+        if produto_une_data.empty:
+            # Verificar se produto existe em outras UNEs
+            produto_geral = df[df['codigo'] == produto_codigo]
+            if produto_geral.empty:
+                return {"error": f"Produto {produto_codigo} não encontrado no sistema", "type": "error"}
+            else:
+                unes_disponiveis = produto_geral['une_nome'].unique()
+                return {
+                    "error": f"Produto {produto_codigo} não encontrado na UNE {une_nome}",
+                    "type": "error",
+                    "suggestion": f"Produto disponível nas UNEs: {', '.join(unes_disponiveis)}"
+                }
+
+        produto = produto_une_data.iloc[0]
+        preco = float(produto.get('preco_38_percent', 0))
+
+        # Calcular vendas se disponível
+        vendas_meses = [f'mes_{i:02d}' for i in range(1, 13)]
+        available_vendas = [col for col in vendas_meses if col in df.columns]
+        vendas_total = 0
+        if available_vendas:
+            vendas_total = float(produto[available_vendas].sum())
+
+        produto_info = {
+            "codigo": produto_codigo,
+            "nome": produto['nome_produto'],
+            "une_codigo": produto['une'],
+            "une_nome": produto['une_nome'],
+            "preco": preco,
+            "vendas_total": vendas_total,
+            "estoque": float(produto.get('estoque_atual', 0)) if 'estoque_atual' in produto else None
+        }
+
+        return {
+            "type": "preco_produto_une",
+            "title": f"Preço do Produto {produto_codigo} na UNE {une_nome}",
+            "result": produto_info,
+            "summary": f"Produto '{produto_info['nome']}' na UNE {une_nome}: R$ {preco:.2f}",
             "tokens_used": 0
         }
 
