@@ -1,0 +1,74 @@
+{
+  "timestamp": "20250919_215242",
+  "test_type": "optimized_system",
+  "queries_tested": 6,
+  "successful_queries": 3,
+  "success_rate": 50.0,
+  "total_tokens_used": 0,
+  "total_tokens_saved": 932,
+  "estimated_cost_savings": 0.0019,
+  "average_response_time": 0.16,
+  "economy_efficiency": 100.0,
+  "detailed_results": {
+    "produto mais vendido": {
+      "success": true,
+      "tokens_used": 0,
+      "tokens_saved": 156,
+      "source": "direct",
+      "time": 0.906665
+    },
+    "filial mais vendeu": {
+      "success": false,
+      "tokens_used": 0,
+      "tokens_saved": 156,
+      "source": "direct",
+      "time": 0.002589
+    },
+    "segmento mais vendeu": {
+      "success": true,
+      "tokens_used": 0,
+      "tokens_saved": 156,
+      "source": "direct",
+      "time": 0.043839
+    },
+    "produtos sem movimento": {
+      "success": true,
+      "tokens_used": 0,
+      "tokens_saved": 156,
+      "source": "direct",
+      "time": 0.005026
+    },
+    "estoque parado": {
+      "success": false,
+      "tokens_used": 0,
+      "tokens_saved": 154,
+      "source": "direct",
+      "time": 0.002007
+    },
+    "produto 369947": {
+      "success": false,
+      "tokens_used": 0,
+      "tokens_saved": 154,
+      "source": "direct",
+      "time": 0.001904
+    }
+  },
+  "cache_stats": {
+    "hits": 0,
+    "misses": 0,
+    "saves": 0,
+    "hit_rate_percent": 0,
+    "tokens_saved": 0,
+    "cache_files": 0,
+    "memory_cache_size": 0
+  },
+  "economy_stats": {
+    "total_queries": 9,
+    "cache_hit_rate": 33.3,
+    "direct_query_rate": 66.7,
+    "llm_usage_rate": 0.0,
+    "total_tokens_saved": 932,
+    "average_tokens_saved_per_query": 103.6,
+    "economy_efficiency": 100.0
+  }
+}
