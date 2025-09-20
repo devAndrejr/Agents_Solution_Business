@@ -189,7 +189,16 @@ class DirectQueryEngine:
         try:
             query_lower = user_query.lower()
 
-            # CORREÇÃO: Detectar EVOLUÇÃO DE VENDAS para um produto específico (MAIOR PRIORIDADE)
+            # CORREÇÃO: Detectar GRÁFICO DE BARRAS para produto específico com UNE (MAIOR PRIORIDADE)
+            product_bar_une_match = re.search(r'(gr[áa]fico.*barras?|barras?).*produto\s*(\d{5,7}).*une\s*(\d+)', query_lower)
+            if product_bar_une_match:
+                produto_codigo = product_bar_une_match.group(2)
+                une_codigo = product_bar_une_match.group(3)
+                result = ("produto_vendas_une_barras", {"produto_codigo": produto_codigo, "une_codigo": une_codigo})
+                logger.info(f"CLASSIFICADO COMO: produto_vendas_une_barras (produto: {produto_codigo}, une: {une_codigo})")
+                return result
+
+            # Detectar EVOLUÇÃO DE VENDAS para um produto específico
             product_evo_match = re.search(r'(gr[áa]fico|evolu[çc][ãa]o|hist[óo]rico|vendas\s+do\s+produto)\s.*?(\b\d{5,7}\b)', query_lower)
             if product_evo_match:
                 produto_codigo = product_evo_match.group(2)
@@ -256,7 +265,7 @@ class DirectQueryEngine:
 
         try:
             # 🔧 FIX CRÍTICO: Para consultas específicas de produtos, carregar dataset completo
-            full_dataset_queries = ["consulta_produto_especifico", "consulta_une_especifica", "evolucao_vendas_produto"]
+            full_dataset_queries = ["consulta_produto_especifico", "consulta_une_especifica", "evolucao_vendas_produto", "produto_vendas_une_barras"]
             use_full_dataset = query_type in full_dataset_queries
 
             if use_full_dataset:
@@ -588,7 +597,13 @@ class DirectQueryEngine:
                 clean_col = col_name.lower().replace('/', '-')
                 
                 if clean_col.startswith('mes_'):
-                    # Ignorar colunas 'mes_xx' pois não temos o ano
+                    # Processar colunas 'mes_xx' sem ano específico
+                    mes_num = int(clean_col.split('_')[1])
+                    sales_timeseries.append({
+                        "date": datetime(2023, mes_num, 1),  # Ano padrão 2023
+                        "mes": f"{mes_num:02d}/2023",
+                        "vendas": float(sales_value) if pd.notna(sales_value) else 0
+                    })
                     continue
 
                 month_str, year_str = clean_col.split('-')
@@ -624,6 +639,71 @@ class DirectQueryEngine:
                 "total_vendas": total_vendas
             },
             "summary": f"O produto '{produto_nome}' teve um total de {total_vendas:,.0f} vendas no período analisado.",
+            "tokens_used": 0
+        }
+
+    def _query_produto_vendas_une_barras(self, df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Query: Gráfico de barras para produto específico em UNE específica."""
+        produto_codigo = params.get('produto_codigo')
+        une_codigo = params.get('une_codigo')
+
+        try:
+            produto_codigo = int(produto_codigo)
+            une_codigo = int(une_codigo)
+        except (ValueError, TypeError):
+            return {"error": f"Código de produto ou UNE inválido: {produto_codigo}, {une_codigo}", "type": "error"}
+
+        # Verificar se produto existe
+        produto_data = df[df['codigo'] == produto_codigo]
+        if produto_data.empty:
+            return {"error": f"Produto {produto_codigo} não encontrado", "type": "error"}
+
+        # Verificar se UNE existe
+        une_data = df[df['une'] == une_codigo]
+        if une_data.empty:
+            unes_disponiveis = sorted(df['une'].unique())
+            return {
+                "error": f"UNE {une_codigo} não encontrada. UNEs disponíveis: {unes_disponiveis[:10]}...",
+                "type": "error"
+            }
+
+        # Verificar se produto existe na UNE específica
+        produto_une_data = df[(df['codigo'] == produto_codigo) & (df['une'] == une_codigo)]
+        if produto_une_data.empty:
+            produto_unes = produto_data['une'].unique()
+            return {
+                "error": f"Produto {produto_codigo} não está disponível na UNE {une_codigo}. Está disponível nas UNEs: {list(produto_unes)}",
+                "type": "error"
+            }
+
+        produto_nome = produto_data.iloc[0]['nome_produto']
+        une_nome = produto_une_data.iloc[0].get('une_nome', f'UNE {une_codigo}')
+
+        # Extrair vendas por mês
+        vendas_meses = [f'mes_{i:02d}' for i in range(1, 13)]
+        vendas_data = produto_une_data[vendas_meses].iloc[0]
+
+        # Criar dados para gráfico de barras
+        chart_data = {
+            "x": [f"Mês {i:02d}" for i in range(1, 13)],
+            "y": [float(vendas_data[col]) if pd.notna(vendas_data[col]) else 0 for col in vendas_meses],
+            "type": "bar"
+        }
+
+        total_vendas = sum(chart_data["y"])
+
+        return {
+            "type": "chart",
+            "title": f"Vendas Mensais - {produto_nome} na {une_nome}",
+            "result": {
+                "chart_data": chart_data,
+                "produto_codigo": produto_codigo,
+                "produto_nome": produto_nome,
+                "une_codigo": une_codigo,
+                "une_nome": une_nome,
+                "total_vendas": total_vendas
+            },
+            "summary": f"Gráfico de barras gerado para {produto_nome} (código {produto_codigo}) na {une_nome}. Total de vendas: {total_vendas:,.0f} unidades.",
             "tokens_used": 0
         }
 
