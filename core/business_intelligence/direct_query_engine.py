@@ -628,14 +628,13 @@ class DirectQueryEngine:
         }
 
     def _query_fallback(self, df: pd.DataFrame, query_type: str, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Fallback para queries não implementadas."""
+        """Fallback para queries não implementadas, agora retorna um erro claro."""
+        logger.warning(f"Consulta não implementada ou não compreendida: {query_type}")
         return {
-            "type": "not_implemented",
-            "title": "Consulta Não Implementada",
-            "result": {"message": f"Query tipo '{query_type}' ainda não implementada"},
-            "summary": f"Esta consulta específica ainda não foi implementada. Use uma das consultas básicas disponíveis.",
-            "tokens_used": 0,
-            "available_queries": list(self.keywords_map.keys())[:10]
+            "type": "error",
+            "error": "Não entendi a sua pergunta. Por favor, tente reformular usando palavras-chave como 'produto mais vendido', 'vendas do produto [código]', etc.",
+            "summary": "Consulta não compreendida.",
+            "title": "Erro ao Processar Consulta"
         }
 
     def process_query(self, user_query: str) -> Dict[str, Any]:

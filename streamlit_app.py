@@ -1,216 +1,330 @@
 '''
-Interface Otimizada para Economia Máxima de LLM
-Sistema que prioriza consultas diretas e usa cache agressivo.
+Interface de Usuário (Frontend) para o Agent_BI.
+Versão integrada que não depende de API externa.
 '''
 import streamlit as st
 import uuid
 import pandas as pd
 import logging
-from datetime import datetime
-import plotly.express as px
-import plotly.graph_objects as go
-from typing import Dict, Any
-import hashlib
+from core.auth import login, sessao_expirada
 
-# Configuração da página DEVE vir primeiro
-st.set_page_config(
-    page_title="AGENT SOLUTIONS BUSINESS",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# Importações do sistema otimizado
+# Importações do backend para integração direta
 try:
+    from core.graph.graph_builder import GraphBuilder
+    from core.config.settings import settings
+    from core.llm_adapter import OpenAILLMAdapter
     from core.connectivity.parquet_adapter import ParquetAdapter
-    from core.business_intelligence.direct_query_engine import DirectQueryEngine
-    from core.business_intelligence.smart_cache import SmartCache
-    from core.auth import login as render_login_screen, sessao_expirada
-    SYSTEM_AVAILABLE = True
+    from core.agents.code_gen_agent import CodeGenAgent
+    from langchain_core.messages import HumanMessage
+    BACKEND_AVAILABLE = True
 except Exception as e:
-    st.error(f"Erro ao carregar sistema: {e}")
-    SYSTEM_AVAILABLE = False
+    logging.warning(f"Backend components não disponíveis: {e}")
+    BACKEND_AVAILABLE = False
 
-# Configuração de logging avançado
-from core.utils.logger_config import get_logger, log_query_attempt, log_critical_error
+# --- Autenticação ---
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
 
-logger = get_logger('agent_bi.streamlit')
+if not st.session_state.authenticated or sessao_expirada():
+    st.session_state.authenticated = False
+    login()
+else:
+    # --- Configuração da Página ---
+    st.set_page_config(page_title="Agent_BI", page_icon="📊", layout="wide")
+    st.title("📊 Agent_BI - Assistente Inteligente")
 
-# --- Funções de Autenticação e Layout ---
+    # --- Inicialização do Backend Integrado ---
+    @st.cache_resource
+    def initialize_backend():
+        """Inicializa os componentes do backend uma única vez"""
+        debug_info = []
 
-def check_user_login():
-    """Verifica se o usuário está logado e se a sessão não expirou."""
-    if sessao_expirada():
-        st.session_state.authenticated = False
-        st.session_state.username = None
-        st.session_state.role = None
-        return False
-    return st.session_state.get('authenticated', False)
+        # Debug 1: Verificar imports
+        debug_info.append(f"BACKEND_AVAILABLE: {BACKEND_AVAILABLE}")
+        if not BACKEND_AVAILABLE:
+            with st.sidebar:
+                st.error("❌ Imports do backend falharam")
+                st.write("Componentes não carregados:")
+                st.code("LangGraph, OpenAI, ParquetAdapter, etc.")
+            return None
 
-def main_app():
-    """Renderiza a aplicação principal após o login."""
-    parquet_adapter, query_engine, cache = init_system()
-
-    if not all([parquet_adapter, query_engine, cache]):
-        st.error("O sistema não está disponível. Verifique a configuração e o arquivo de dados.")
-        if st.button("Tentar Novamente"):
-            st.rerun()
-        return
-
-    # --- BARRA LATERAL ---
-    with st.sidebar:
-        st.markdown("""
-        <div style="padding: 1rem; text-align: center;">
-            <h2>AGENT SOLUTIONS BUSINESS</h2>
-            <p style="font-size: 0.9rem; color: #888;">Menu Principal</p>
-        </div>
-        """, unsafe_allow_html=True)
-        st.markdown("---")
-
-        if st.button("🔒 Sair (Logout)", use_container_width=True):
-            st.session_state.authenticated = False
-            st.session_state.username = None
-            st.session_state.role = None
-            st.rerun()
-
-        st.markdown("---")
-        cache_stats = cache.get_stats()
-        st.markdown("### 📈 Estatísticas do Cache")
-        st.markdown(f"""
-        <div class="cache-stats">
-            <strong>💰 Economia de Tokens:</strong> {cache_stats['tokens_saved']:,}<br>
-            <strong>🎯 Taxa de Acerto:</strong> {cache_stats['hit_rate_percent']}%<br>
-            <strong>📁 Arquivos em Cache:</strong> {cache_stats['cache_files']}<br>
-            <strong>⚡ Cache em Memória:</strong> {cache_stats['memory_cache_size']}
-        </div>
-        """, unsafe_allow_html=True)
-
-        if st.button("🗑️ Limpar Cache", use_container_width=True):
-            cache.clear_all()
-            st.success("Cache limpo!")
-            st.rerun()
-
-    # --- CONTEÚDO PRINCIPAL ---
-    st.markdown("""
-    <div class="main-header">
-        <h1>AGENT SOLUTIONS BUSINESS</h1>
-        <p>Business Intelligence com Economia Máxima de LLM</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.header("💬 Faça sua Consulta")
-    
-    # Usando st.form para controlar a submissão da consulta
-    with st.form("query_form", clear_on_submit=True):
-        query_input = st.text_input(
-            "Digite sua pergunta sobre os dados:",
-            placeholder="Ex: gere um gráfico de vendas do produto 59294",
-            key="query_text_input" # Adiciona uma chave para o input
-        )
-        submitted = st.form_submit_button("Perguntar", use_container_width=True)
-
-        logger.debug(f"Form submitted: {submitted}, Query Input: '{query_input}'")
-        st.write(f"Submitted: {submitted}, Query: '{query_input}'") # DEBUG LINE
-
-        if submitted and query_input:
-            # Limpa o selected_query após a submissão para evitar re-processamento
-            st.session_state.selected_query = '' 
-            
-            spinner_text = "🔍 Processando consulta..."
-            with st.spinner(spinner_text):
-                try:
-                    logger.info(f"PROCESSANDO CONSULTA USUÁRIO: '{query_input}'")
-                    query_type, params = query_engine.classify_intent_direct(query_input)
-                    logger.info(f"CLASSIFICADO COMO: {query_type} | Params: {params}")
-
-                    cached_result = cache.get(query_type, params)
-                    if cached_result:
-                        logger.info(f"RESULTADO DO CACHE: {query_type}")
-                        st.success("⚡ Resultado obtido do cache (0 tokens LLM)")
-                        result = cached_result
-                        log_query_attempt(query_input, query_type, params, True, None)
-                    else:
-                        logger.info(f"EXECUTANDO CONSULTA NOVA: {query_type}")
-                        result = query_engine.process_query(query_input)
-                        if result.get('type') != 'error':
-                            cache.set(query_type, params, result, tokens_would_use=150)
-                            logger.info(f"RESULTADO SALVO NO CACHE: {query_type}")
-                    
-                    logger.info(f"RESULTADO FINAL DO PROCESSAMENTO: {result}")
-                    st.session_state.last_query_result = result # Persiste o resultado
-
-                except Exception as e:
-                    error_msg = str(e)
-                    logger.error(f"ERRO CRÍTICO NO STREAMLIT: {error_msg}")
-                    log_critical_error(e, "streamlit_query_processing", {"user_query": query_input})
-                    st.error(f"Erro ao processar consulta: {error_msg}")
-                    logger.error(f"TRACEBACK COMPLETO: {traceback.format_exc()}")
-        
-    # Exibir o resultado da última consulta se houver
-    # Isso é útil para manter o resultado na tela após o rerun do form
-    if 'last_query_result' in st.session_state and st.session_state.last_query_result:
-        display_result(st.session_state.last_query_result)
-    elif submitted and not query_input: # Caso o botão seja clicado sem texto
-        st.warning("Por favor, digite sua pergunta antes de clicar em 'Perguntar'.")
-
-    admin_panel(cache, query_engine, parquet_adapter)
-
-# --- Funções do Painel de Administração e Display ---
-
-def admin_panel(cache, query_engine, parquet_adapter):
-    """Painel administrativo com informações detalhadas."""
-    st.markdown("---")
-    st.header("🛠️ Painel Administrativo")
-    admin_tabs = st.tabs(["📊 Estatísticas Detalhadas", "🔧 Configurações", "🐛 Debug", "💾 Cache Management", "📋 Logs do Sistema"])
-    # ... (código do admin_panel)
-
-def display_result(result: Dict[str, Any]):
-    """Exibe resultado da consulta com gráficos."""
-    # ... (código do display_result)
-
-def create_simple_chart(result: Dict[str, Any]):
-    """Cria gráfico melhorado baseado no tipo de resultado."""
-    # ... (código do create_simple_chart)
-
-# --- Inicialização e Controle de Fluxo ---
-
-@st.cache_resource
-def init_system():
-    """Inicializa sistema com cache."""
-    if not SYSTEM_AVAILABLE:
-        return None, None, None
-    try:
-        parquet_paths = [
-            "data/parquet/admmat.parquet",
-            "/mount/src/agents_solution_business/data/parquet/admmat.parquet",
-            "./data/parquet/admmat.parquet"
-        ]
-        parquet_adapter = None
-        for path in parquet_paths:
+        try:
+            # Debug 2: Verificar secrets
+            api_key = None
+            secrets_status = "❌ Falhou"
             try:
-                parquet_adapter = ParquetAdapter(path)
-                if check_user_login():
-                    st.success(f"✅ Dataset carregado: {path}")
-                break
-            except FileNotFoundError:
-                continue
-        if parquet_adapter is None:
-            st.error("❌ Arquivo parquet não encontrado")
-            return None, None, None
-        cache = SmartCache(cache_dir="cache", max_size_mb=50)
-        query_engine = DirectQueryEngine(parquet_adapter)
-        cache.preload_frequent_queries(parquet_adapter)
-        return parquet_adapter, query_engine, cache
-    except Exception as e:
-        st.error(f"Erro na inicialização: {e}")
-        return None, None, None
+                api_key = st.secrets.get("OPENAI_API_KEY")
+                if api_key and api_key.startswith("sk-"):
+                    secrets_status = "✅ OK"
+                    debug_info.append(f"Secrets OpenAI: OK ({api_key[:10]}...)")
+                else:
+                    debug_info.append(f"Secrets OpenAI: Inválida")
+            except Exception as e:
+                debug_info.append(f"Secrets erro: {e}")
 
-def main():
-    """Função principal que controla o fluxo de login e a aplicação."""
-    if check_user_login():
-        main_app()
+            # Debug 3: Fallback para settings
+            if not api_key or not api_key.startswith("sk-"):
+                try:
+                    api_key = settings.OPENAI_API_KEY.get_secret_value()
+                    debug_info.append(f"Settings OpenAI: OK")
+                except Exception as e:
+                    debug_info.append(f"Settings erro: {e}")
+
+            if not api_key or not api_key.startswith("sk-"):
+                raise ValueError("OPENAI_API_KEY não encontrada em secrets nem settings")
+
+            # Debug 4: Inicializar LLM
+            debug_info.append("Inicializando LLM...")
+            llm_adapter = OpenAILLMAdapter(api_key=api_key)
+            debug_info.append("✅ LLM OK")
+
+            # Debug 5: Inicializar Parquet
+            debug_info.append("Inicializando Parquet...")
+            import os
+            parquet_path = os.path.join(os.getcwd(), "data", "parquet", "admmat.parquet")
+            if not os.path.exists(parquet_path):
+                # Criar dados mock para cloud se arquivo não existir
+                import pandas as pd
+                mock_data = pd.DataFrame({
+                    'codigo': [59294, 12345, 67890],
+                    'descricao': ['Produto Exemplo 1', 'Produto Exemplo 2', 'Produto Exemplo 3'],
+                    'preco': [99.90, 149.50, 79.30],
+                    'categoria': ['Categoria A', 'Categoria B', 'Categoria A']
+                })
+                os.makedirs(os.path.dirname(parquet_path), exist_ok=True)
+                mock_data.to_parquet(parquet_path)
+                debug_info.append("⚠️ Arquivo parquet não encontrado - criado dados mock")
+            parquet_adapter = ParquetAdapter(file_path=parquet_path)
+            debug_info.append("✅ Parquet OK")
+
+            # Debug 6: Inicializar CodeGen
+            debug_info.append("Inicializando CodeGen...")
+            code_gen_agent = CodeGenAgent(llm_adapter=llm_adapter)
+            debug_info.append("✅ CodeGen OK")
+
+            # Debug 7: Construir Grafo
+            debug_info.append("Construindo grafo...")
+            graph_builder = GraphBuilder(
+                llm_adapter=llm_adapter,
+                parquet_adapter=parquet_adapter,
+                code_gen_agent=code_gen_agent
+            )
+            agent_graph = graph_builder.build()
+            debug_info.append("✅ Grafo OK")
+
+            debug_info.append("🎉 Backend inicializado com sucesso!")
+
+            return {
+                "llm_adapter": llm_adapter,
+                "parquet_adapter": parquet_adapter,
+                "code_gen_agent": code_gen_agent,
+                "agent_graph": agent_graph
+            }
+
+        except Exception as e:
+            debug_info.append(f"❌ ERRO: {str(e)}")
+
+            # Mostrar debug completo na sidebar APENAS para admins
+            user_role = st.session_state.get('role', '')
+            if user_role == 'admin':
+                with st.sidebar:
+                    st.error("🚨 Backend Error (Admin)")
+                    st.write("**Debug Log:**")
+                    for info in debug_info:
+                        if "✅" in info:
+                            st.success(info)
+                        elif "❌" in info:
+                            st.error(info)
+                        else:
+                            st.info(info)
+
+                    st.write("**Erro Completo:**")
+                    st.code(str(e))
+            else:
+                with st.sidebar:
+                    st.error("❌ Sistema temporariamente indisponível")
+
+            return None
+
+    # Inicializar backend
+    backend_components = initialize_backend()
+
+    # Salvar no session_state para acesso em outras partes
+    if backend_components:
+        st.session_state.backend_components = backend_components
+        user_role = st.session_state.get('role', '')
+        if user_role == 'admin':
+            with st.sidebar:
+                st.success("✅ Backend inicializado!")
     else:
-        render_login_screen()
+        st.session_state.backend_components = None
+        user_role = st.session_state.get('role', '')
+        if user_role == 'admin':
+            with st.sidebar:
+                st.error("❌ Backend falhou")
 
-if __name__ == "__main__":
-    main()
+    # --- Logout Button ---
+    with st.sidebar:
+        st.write(f"Bem-vindo, {st.session_state.get('username', '')}!")
+        if st.button("Logout"):
+            st.session_state.authenticated = False
+            st.session_state.username = ""
+            st.session_state.role = ""
+            # Clear chat history on logout
+            st.session_state.messages = [
+                {
+                    "role": "assistant",
+                    "content": {
+                        "type": "text",
+                        "content": "Você foi desconectado. Faça login para continuar."
+                    }
+                }
+            ]
+            st.rerun()
+
+
+    # --- Estado da Sessão ---
+
+    if 'session_id' not in st.session_state:
+        st.session_state.session_id = str(uuid.uuid4())
+    if 'messages' not in st.session_state:
+        st.session_state.messages = [
+            {
+                "role": "assistant",
+                "content": {
+                    "type": "text",
+                    "content": "Olá! Como posso ajudar você com seus dados hoje?"
+                }
+            }
+        ]
+
+    # --- Funções de Interação ---
+    def query_backend(user_input: str):
+        '''Processa a query diretamente usando o backend integrado.'''
+        # 📝 GARANTIR que a pergunta do usuário seja sempre preservada
+        user_message = {"role": "user", "content": {"type": "text", "content": user_input}}
+        st.session_state.messages.append(user_message)
+
+        with st.spinner("O agente está a pensar..."):
+            try:
+                if not backend_components or not backend_components.get("agent_graph"):
+                    # Fallback: resposta simples se backend não disponível
+                    agent_response = {
+                        "type": "text",
+                        "content": f"⚠️ Sistema está sendo inicializado. Tente novamente em alguns segundos.\n\nSe o problema persistir, contate o administrador.",
+                        "user_query": user_input
+                    }
+                else:
+                    # Usar backend integrado (similar ao main.py)
+                    initial_state = {"messages": [HumanMessage(content=user_input)]}
+                    final_state = backend_components["agent_graph"].invoke(initial_state)
+                    agent_response = final_state.get("final_response", {})
+
+                    # Garantir que a resposta inclui informações da pergunta
+                    if "user_query" not in agent_response:
+                        agent_response["user_query"] = user_input
+
+                # ✅ GARANTIR estrutura correta da resposta
+                assistant_message = {"role": "assistant", "content": agent_response}
+                st.session_state.messages.append(assistant_message)
+
+                # 🔍 LOG da resposta (removido print para evitar problemas de encoding)
+                # print(f"AGENT RESPONSE ADDED: Type={agent_response.get('type', 'unknown')} - Total messages: {len(st.session_state.messages)}")
+
+            except Exception as e:
+                # Tratamento de erro local
+                error_content = {
+                    "type": "error",
+                    "content": f"❌ Erro ao processar consulta: {str(e)}\n\nVerifique se a chave OPENAI_API_KEY está configurada corretamente nos secrets."
+                }
+                st.session_state.messages.append({"role": "assistant", "content": error_content})
+
+        st.rerun()
+
+    # --- Renderização da Interface ---
+    # 🔍 DEBUG: Mostrar histórico de mensagens na sidebar (apenas para desenvolvimento)
+    with st.sidebar:
+        st.write(f"**Total de mensagens:** {len(st.session_state.messages)}")
+        if st.checkbox("Mostrar histórico debug"):
+            for i, msg in enumerate(st.session_state.messages):
+                st.write(f"**{i+1}. {msg['role'].title()}:**")
+                content_preview = str(msg.get('content', {}))[:100] + "..." if len(str(msg.get('content', {}))) > 100 else str(msg.get('content', {}))
+                st.write(f"{content_preview}")
+
+    # 💬 RENDERIZAR histórico de conversas
+    for i, msg in enumerate(st.session_state.messages):
+        try:
+            with st.chat_message(msg["role"]):
+                response_data = msg.get("content", {})
+
+                # ✅ Garantir que response_data seja um dicionário
+                if not isinstance(response_data, dict):
+                    response_data = {"type": "text", "content": str(response_data)}
+
+                response_type = response_data.get("type", "text")
+                content = response_data.get("content", "Conteúdo não disponível")
+
+            # 🔍 DEBUG: Log de renderização (removido print para evitar problemas)
+            # if msg["role"] == "user":
+            #     print(f"RENDERING USER MSG {i+1}: '{content}'")
+            # else:
+            #     print(f"RENDERING ASSISTANT MSG {i+1}: Type={response_type}")
+            
+            # 📈 RENDERIZAR GRÁFICOS
+            if response_type == "chart":
+                import json
+                import plotly.graph_objects as go
+
+                # 📝 Mostrar contexto da pergunta que gerou o gráfico
+                user_query = response_data.get("user_query")
+                if user_query:
+                    st.caption(f"📝 Pergunta: {user_query}")
+
+                try:
+                    if isinstance(content, str):
+                        # Se content é string JSON, parse para objeto
+                        chart_data = json.loads(content)
+                    else:
+                        # Se content já é dict, usa diretamente
+                        chart_data = content
+
+                    # Cria figura Plotly a partir do JSON
+                    fig = go.Figure(chart_data)
+                    st.plotly_chart(fig, use_container_width=True)
+                    st.success("✅ Gráfico gerado com sucesso!")
+                except Exception as e:
+                    st.error(f"Erro ao renderizar gráfico: {e}")
+                    st.write("Dados do gráfico:", content)
+            elif response_type == "data" and isinstance(content, list):
+                # 📝 Mostrar contexto da pergunta que gerou os dados
+                user_query = response_data.get("user_query")
+                if user_query:
+                    st.caption(f"📝 Pergunta: {user_query}")
+
+                if content:
+                    st.dataframe(pd.DataFrame(content))
+                    st.info(f"📊 {len(content)} registros encontrados")
+                else:
+                    st.warning("⚠️ Nenhum dado encontrado para a consulta.")
+            elif response_type == "clarification":
+                st.markdown(content.get("message"))
+                choices = content.get("choices", {})
+                for choice_category, choice_list in choices.items():
+                    for choice in choice_list:
+                        if st.button(choice, key=f"btn_{choice}_{uuid.uuid4()}"):
+                            query_backend(choice)
+            else:
+                # 📝 Para respostas de texto, também mostrar contexto se disponível
+                user_query = response_data.get("user_query")
+                if user_query and msg["role"] == "assistant":
+                    st.caption(f"📝 Pergunta: {user_query}")
+
+                st.write(content)
+
+        except Exception as e:
+            # ❌ Tratamento de erro na renderização
+            st.error(f"Erro ao renderizar mensagem {i+1}: {str(e)}")
+            st.write(f"Dados da mensagem: {msg}")
+
+    if prompt := st.chat_input("Faça sua pergunta..."):
+        query_backend(prompt)
