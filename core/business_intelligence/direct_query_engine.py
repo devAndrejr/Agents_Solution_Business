@@ -828,8 +828,8 @@ class DirectQueryEngine:
         # Ordenar por vendas (descendente)
         produtos_por_une.sort(key=lambda x: x['vendas_total'], reverse=True)
 
-        # Preparar dados para gráfico
-        x_data = [f"{item['une_nome']}" for item in produtos_por_une]
+        # Preparar dados para gráfico com nome do produto
+        x_data = [f"UNE {item['une_nome']}\n{item['produto_nome'][:30]}{'...' if len(item['produto_nome']) > 30 else ''}" for item in produtos_por_une]
         y_data = [float(item['vendas_total']) for item in produtos_por_une]
 
         # Cores baseadas na performance
