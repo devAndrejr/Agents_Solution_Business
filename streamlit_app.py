@@ -317,80 +317,67 @@ else:
                     st.caption(f"📝 Pergunta: {user_query}")
 
                 try:
-                    # DEBUG: Verificar estrutura de dados
-                    st.write("DEBUG - Response data keys:", list(response_data.keys()))
-                    st.write("DEBUG - Content type:", type(content))
-
-                    # Para gráficos chart_data está em response_data['result']['chart_data']
+                    # Verificar se chart_data está em result ou no content diretamente
                     if 'result' in response_data and 'chart_data' in response_data['result']:
+                        # Nosso formato personalizado
                         chart_data = response_data['result']['chart_data']
-                        st.write("DEBUG - Usando chart_data do result")
-                    elif isinstance(content, str):
-                        # Se content é string JSON, parse para objeto
-                        chart_data = json.loads(content)
-                        st.write("DEBUG - Parsed content as JSON")
+
+                        # Criar gráfico melhorado com cores e interatividade
+                        chart_type = chart_data.get("type", "bar")
+                        x_data = chart_data.get("x", [])
+                        y_data = chart_data.get("y", [])
+                        colors = chart_data.get("colors", None)
+
+                        if chart_type == "bar" and x_data and y_data:
+                            # Gráfico de barras com melhorias visuais
+                            fig = go.Figure()
+
+                            # Adicionar barras com cores personalizadas
+                            fig.add_trace(go.Bar(
+                                x=x_data,
+                                y=y_data,
+                                marker_color=colors if colors else '#1f77b4',
+                                text=[f'{int(val):,}' for val in y_data],
+                                textposition='outside',
+                                name='Vendas',
+                                hovertemplate='<b>%{x}</b><br>Vendas: %{y:,.0f}<extra></extra>'
+                            ))
+
+                            # Configurações de layout melhoradas
+                            height = chart_data.get("height", 500)
+                            margin = chart_data.get("margin", {"l": 60, "r": 60, "t": 80, "b": 100})
+
+                            fig.update_layout(
+                                title={
+                                    'text': response_data.get("title", "Gráfico"),
+                                    'x': 0.5,
+                                    'xanchor': 'center',
+                                    'font': {'size': 16, 'family': 'Arial Black'}
+                                },
+                                xaxis_title="UNE",
+                                yaxis_title="Vendas",
+                                height=height,
+                                margin=margin,
+                                showlegend=False,
+                                plot_bgcolor='rgba(0,0,0,0)',
+                                paper_bgcolor='rgba(0,0,0,0)',
+                                font=dict(family="Arial, sans-serif", size=12, color="#333"),
+                                xaxis=dict(tickangle=-45),
+                                yaxis=dict(gridcolor='rgba(128,128,128,0.2)'),
+                                hoverlabel=dict(bgcolor="white", font_size=12, font_family="Arial")
+                            )
+                        else:
+                            # Fallback para formato personalizado sem dados
+                            st.error("Dados do gráfico não disponíveis")
+                            return
                     else:
-                        # Se content já é dict, usa diretamente
-                        chart_data = content
-                        st.write("DEBUG - Using content directly")
+                        # Formato Plotly padrão (já completo)
+                        if isinstance(content, str):
+                            chart_data = json.loads(content)
+                        else:
+                            chart_data = content
 
-                    st.write("DEBUG - Chart data:", chart_data)
-
-                    # Criar gráfico melhorado com cores e interatividade
-                    chart_type = chart_data.get("type", "bar")
-                    x_data = chart_data.get("x", [])
-                    y_data = chart_data.get("y", [])
-                    colors = chart_data.get("colors", None)
-
-                    st.write(f"DEBUG - X data length: {len(x_data)}")
-                    st.write(f"DEBUG - Y data length: {len(y_data)}")
-                    st.write(f"DEBUG - X data: {x_data}")
-                    st.write(f"DEBUG - Y data: {y_data}")
-
-                    if chart_type == "bar":
-                        # Gráfico de barras com melhorias visuais
-                        fig = go.Figure()
-
-                        # Adicionar barras com cores personalizadas
-                        fig.add_trace(go.Bar(
-                            x=x_data,
-                            y=y_data,
-                            marker_color=colors if colors else '#1f77b4',
-                            text=[f'{int(val):,}' for val in y_data],  # Rótulos de dados formatados
-                            textposition='outside',
-                            name='Vendas',
-                            hovertemplate='<b>%{x}</b><br>Vendas: %{y:,.0f}<extra></extra>'
-                        ))
-
-                        # Configurações de layout melhoradas
-                        height = chart_data.get("height", 500)
-                        margin = chart_data.get("margin", {"l": 60, "r": 60, "t": 80, "b": 100})
-
-                        fig.update_layout(
-                            title={
-                                'text': response_data.get("title", "Gráfico"),
-                                'x': 0.5,
-                                'xanchor': 'center',
-                                'font': {'size': 16, 'family': 'Arial Black'}
-                            },
-                            xaxis_title="UNE",
-                            yaxis_title="Vendas",
-                            height=height,
-                            margin=margin,
-                            showlegend=False,
-                            plot_bgcolor='rgba(0,0,0,0)',
-                            xaxis={'tickangle': -45, 'tickfont': {'size': 10}},
-                            yaxis={'tickformat': ',.0f'}
-                        )
-
-                        # Adicionar interatividade personalizada
-                        fig.update_traces(
-                            hoverinfo='text+y',
-                            hoverlabel=dict(bgcolor="white", font_size=12, font_family="Arial")
-                        )
-
-                    else:
-                        # Fallback para outros tipos de gráfico
+                        # Usar gráfico Plotly diretamente
                         fig = go.Figure(chart_data)
 
                     # Renderizar gráfico
