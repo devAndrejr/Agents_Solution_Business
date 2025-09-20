@@ -8,18 +8,51 @@ import pandas as pd
 import logging
 from core.auth import login, sessao_expirada
 
-# Importações do backend para integração direta
+# Importações do backend para integração direta - TESTE INDIVIDUAL
+import_errors = []
+BACKEND_AVAILABLE = True
+
+# Teste cada import individualmente para melhor diagnóstico
 try:
     from core.graph.graph_builder import GraphBuilder
-    from core.config.settings import settings
-    from core.llm_adapter import OpenAILLMAdapter
-    from core.connectivity.parquet_adapter import ParquetAdapter
-    from core.agents.code_gen_agent import CodeGenAgent
-    from langchain_core.messages import HumanMessage
-    BACKEND_AVAILABLE = True
 except Exception as e:
-    logging.warning(f"Backend components não disponíveis: {e}")
+    import_errors.append(f"GraphBuilder: {e}")
     BACKEND_AVAILABLE = False
+
+try:
+    from core.config.settings import settings
+except Exception as e:
+    import_errors.append(f"Settings: {e}")
+    BACKEND_AVAILABLE = False
+
+try:
+    from core.llm_adapter import OpenAILLMAdapter
+except Exception as e:
+    import_errors.append(f"OpenAILLMAdapter: {e}")
+    BACKEND_AVAILABLE = False
+
+try:
+    from core.connectivity.parquet_adapter import ParquetAdapter
+except Exception as e:
+    import_errors.append(f"ParquetAdapter: {e}")
+    BACKEND_AVAILABLE = False
+
+try:
+    from core.agents.code_gen_agent import CodeGenAgent
+except Exception as e:
+    import_errors.append(f"CodeGenAgent: {e}")
+    BACKEND_AVAILABLE = False
+
+try:
+    from langchain_core.messages import HumanMessage
+except Exception as e:
+    import_errors.append(f"LangChain: {e}")
+    BACKEND_AVAILABLE = False
+
+if import_errors:
+    logging.warning(f"Erros de import detectados: {import_errors}")
+else:
+    logging.info("Todos os imports do backend foram bem-sucedidos")
 
 # --- Autenticação ---
 if "authenticated" not in st.session_state:
@@ -44,8 +77,11 @@ else:
         if not BACKEND_AVAILABLE:
             with st.sidebar:
                 st.error("❌ Imports do backend falharam")
-                st.write("Componentes não carregados:")
-                st.code("LangGraph, OpenAI, ParquetAdapter, etc.")
+                st.write("**Erros específicos:**")
+                for error in import_errors:
+                    st.code(error)
+                st.write("**Possíveis soluções:**")
+                st.info("1. Verificar requirements.txt\n2. Reinstalar dependências\n3. Verificar Python path")
             return None
 
         try:
