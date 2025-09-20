@@ -218,7 +218,9 @@ def init_system():
         for path in parquet_paths:
             try:
                 parquet_adapter = ParquetAdapter(path)
-                st.success(f"✅ Dataset carregado: {path}")
+                # Mostrar sucesso apenas para admin
+                if check_admin_login():
+                    st.success(f"✅ Dataset carregado: {path}")
                 break
             except FileNotFoundError:
                 continue
@@ -244,13 +246,21 @@ def init_system():
 def main():
     """Interface principal da aplicação."""
 
-    # Header
-    st.markdown("""
-    <div class="main-header">
-        <h1>📊 Agent_BI - Sistema Otimizado</h1>
-        <p>Business Intelligence com Economia Máxima de LLM</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Header limpo
+    if check_admin_login():
+        st.markdown("""
+        <div class="main-header">
+            <h1>📊 Agent_BI - Sistema Otimizado</h1>
+            <p>Business Intelligence com Economia Máxima de LLM</p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="main-header">
+            <h1>📊 Agent_BI</h1>
+            <p>Sistema de Business Intelligence</p>
+        </div>
+        """, unsafe_allow_html=True)
 
     # Inicializar sistema
     parquet_adapter, query_engine, cache = init_system()
@@ -259,95 +269,53 @@ def main():
         st.error("Sistema não disponível. Verifique a configuração.")
         return
 
-    # Sidebar com estatísticas e controles
+    # Sidebar limpo
     with st.sidebar:
-        st.header("🎛️ Controles")
-
         # Sistema de login admin
         admin_login_form()
 
-        # Estatísticas do cache (básicas para todos)
-        cache_stats = cache.get_stats()
-        st.markdown("### 📈 Estatísticas do Cache")
-        st.markdown(f"""
-        <div class="cache-stats">
-            <strong>💰 Economia de Tokens:</strong> {cache_stats['tokens_saved']:,}<br>
-            <strong>🎯 Taxa de Acerto:</strong> {cache_stats['hit_rate_percent']}%<br>
-            <strong>📁 Arquivos em Cache:</strong> {cache_stats['cache_files']}<br>
-            <strong>⚡ Cache em Memória:</strong> {cache_stats['memory_cache_size']}
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Botão para limpar cache (apenas para admin)
+        # Informações básicas apenas se admin logado
         if check_admin_login():
+            st.markdown("---")
+            cache_stats = cache.get_stats()
+            st.markdown("### 📈 Estatísticas do Cache")
+            st.markdown(f"""
+            <div class="cache-stats">
+                <strong>💰 Economia de Tokens:</strong> {cache_stats['tokens_saved']:,}<br>
+                <strong>🎯 Taxa de Acerto:</strong> {cache_stats['hit_rate_percent']}%<br>
+                <strong>📁 Arquivos em Cache:</strong> {cache_stats['cache_files']}<br>
+                <strong>⚡ Cache em Memória:</strong> {cache_stats['memory_cache_size']}
+            </div>
+            """, unsafe_allow_html=True)
+
             if st.button("🗑️ Limpar Cache"):
                 cache.clear_all()
                 st.success("Cache limpo!")
                 st.rerun()
 
-        # Consultas populares
-        st.markdown("### 🔥 Consultas Populares")
-        popular_queries = cache.get_popular_queries()
+    # Área principal - Interface limpa
+    st.header("💬 Faça sua Consulta")
 
-        for query in popular_queries[:8]:
-            if st.button(f"📊 {query}", key=f"pop_{query}"):
-                st.session_state.selected_query = query
-
-    # Área principal
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        st.header("💬 Consulta")
-
-        # Input de consulta
-        query_input = st.text_input(
-            "Digite sua pergunta:",
-            value=st.session_state.get('selected_query', ''),
-            placeholder="Ex: top 10 produtos segmento tecidos, produto 59294, ranking filiais..."
-        )
-
-        # Sugestões de consultas avançadas
-        if not query_input:
-            st.markdown("### 💡 Consultas Inteligentes")
-
-            advanced_suggestions = [
-                "top 10 produtos segmento tecidos",
-                "top 10 produtos segmento confecção",
-                "produtos mais vendidos segmento casa",
-                "ranking top filiais",
-                "produto 59294",
-                "produto 123456"
-            ]
-
-            cols = st.columns(2)
-            for i, suggestion in enumerate(advanced_suggestions):
-                with cols[i % 2]:
-                    if st.button(f"🔍 {suggestion}", key=f"adv_sug_{i}"):
-                        st.session_state.selected_query = suggestion
-                        st.rerun()
-
-    with col2:
-        st.header("🎯 Consultas Disponíveis")
-        available_queries = query_engine.get_available_queries()
-
-        for query_info in available_queries[:10]:
-            st.markdown(f"""
-            <div class="query-suggestion">
-                <strong>{query_info['keyword']}</strong><br>
-                <small>{query_info['description']}</small>
-            </div>
-            """, unsafe_allow_html=True)
+    # Input de consulta limpo
+    query_input = st.text_input(
+        "Digite sua pergunta sobre os dados:",
+        value=st.session_state.get('selected_query', ''),
+        placeholder="Ex: quais são os 10 produtos mais vendidos no segmento tecidos?"
+    )
 
     # Processar consulta
     if query_input:
-        with st.spinner("🔍 Processando consulta (sem usar LLM)..."):
+        spinner_text = "🔍 Processando consulta (sem usar LLM)..." if check_admin_login() else "🔍 Processando consulta..."
+
+        with st.spinner(spinner_text):
             try:
                 # Verificar cache primeiro
                 query_type, params = query_engine.classify_intent_direct(query_input)
                 cached_result = cache.get(query_type, params)
 
                 if cached_result:
-                    st.success("⚡ Resultado obtido do cache (0 tokens LLM)")
+                    if check_admin_login():
+                        st.success("⚡ Resultado obtido do cache (0 tokens LLM)")
                     result = cached_result
                 else:
                     # Executar consulta direta
@@ -378,32 +346,33 @@ def display_result(result: Dict[str, Any]):
     st.markdown("---")
     st.header(f"📊 {result.get('title', 'Resultado')}")
 
-    # Métricas principais
-    col1, col2, col3 = st.columns(3)
+    # Métricas técnicas apenas para admin
+    if check_admin_login():
+        col1, col2, col3 = st.columns(3)
 
-    with col1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <strong>Método:</strong> {result.get('method', 'N/A')}<br>
-            <strong>Tokens LLM:</strong> {result.get('tokens_used', 0)}
-        </div>
-        """, unsafe_allow_html=True)
+        with col1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <strong>Método:</strong> {result.get('method', 'N/A')}<br>
+                <strong>Tokens LLM:</strong> {result.get('tokens_used', 0)}
+            </div>
+            """, unsafe_allow_html=True)
 
-    with col2:
-        st.markdown(f"""
-        <div class="metric-card">
-            <strong>Tempo:</strong> {result.get('processing_time', 0):.2f}s<br>
-            <strong>Tipo:</strong> {result.get('type', 'N/A')}
-        </div>
-        """, unsafe_allow_html=True)
+        with col2:
+            st.markdown(f"""
+            <div class="metric-card">
+                <strong>Tempo:</strong> {result.get('processing_time', 0):.2f}s<br>
+                <strong>Tipo:</strong> {result.get('type', 'N/A')}
+            </div>
+            """, unsafe_allow_html=True)
 
-    with col3:
-        st.markdown(f"""
-        <div class="metric-card">
-            <strong>Query:</strong> {result.get('query_type', 'N/A')}<br>
-            <strong>Status:</strong> ✅ Sucesso
-        </div>
-        """, unsafe_allow_html=True)
+        with col3:
+            st.markdown(f"""
+            <div class="metric-card">
+                <strong>Query:</strong> {result.get('query_type', 'N/A')}<br>
+                <strong>Status:</strong> ✅ Sucesso
+            </div>
+            """, unsafe_allow_html=True)
 
     # Resultado principal
     st.markdown("### 📋 Resultado")
@@ -553,15 +522,16 @@ if 'selected_query' not in st.session_state:
 if 'admin_logged_in' not in st.session_state:
     st.session_state.admin_logged_in = False
 
-# Footer
-st.markdown("---")
-st.markdown("""
-<div style="text-align: center; color: #64748b; font-size: 0.9rem;">
-    🚀 Agent_BI Otimizado - Economia Máxima de LLM |
-    💰 Zero tokens para consultas básicas |
-    ⚡ Cache inteligente ativo
-</div>
-""", unsafe_allow_html=True)
+# Footer limpo para clientes
+if check_admin_login():
+    st.markdown("---")
+    st.markdown("""
+    <div style="text-align: center; color: #64748b; font-size: 0.9rem;">
+        🚀 Agent_BI Otimizado - Economia Máxima de LLM |
+        💰 Zero tokens para consultas básicas |
+        ⚡ Cache inteligente ativo
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
