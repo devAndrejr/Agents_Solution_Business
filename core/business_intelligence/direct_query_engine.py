@@ -907,6 +907,17 @@ class DirectQueryEngine:
         if top_produtos.empty:
             return {"error": f"Nenhum produto encontrado no segmento '{segmento}'", "type": "error"}
 
+        # Preparar dados para o gráfico
+        x_data = [produto['nome_produto'] for _, produto in top_produtos.iterrows()]
+        y_data = [float(produto['vendas_total']) for _, produto in top_produtos.iterrows()]
+
+        chart_data = {
+            "x": x_data,
+            "y": y_data,
+            "type": "bar",
+            "show_values": True
+        }
+
         # Preparar resultado
         produtos_list = []
         for _, produto in top_produtos.iterrows():
@@ -918,25 +929,17 @@ class DirectQueryEngine:
                 "preco": float(produto.get('preco_38_percent', 0))
             })
 
-        # Criar gráfico se necessário
-        chart = None
-        if len(produtos_list) > 1:
-            try:
-                chart = self.chart_generator.create_top_produtos_chart(produtos_list, segmento_real)
-            except Exception as e:
-                logger.warning(f"Erro ao criar gráfico: {e}")
-
         return {
-            "type": "top_produtos_segmento",
+            "type": "chart",
             "title": f"Top {limit} Produtos - {segmento_real}",
             "result": {
+                "chart_data": chart_data,
                 "produtos": produtos_list,
                 "segmento": segmento_real,
                 "total_produtos": len(produtos_list),
                 "vendas_total": sum(p['vendas'] for p in produtos_list)
             },
             "summary": f"Top {len(produtos_list)} produtos em '{segmento_real}'. Líder: {produtos_list[0]['nome']} ({produtos_list[0]['vendas']:,.0f} vendas)",
-            "chart": chart,
             "tokens_used": 0
         }
 
