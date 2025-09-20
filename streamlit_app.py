@@ -252,6 +252,10 @@ else:
                 engine = DirectQueryEngine(adapter)
                 direct_result = engine.process_query(user_input)
 
+                # DEBUG: Mostrar o resultado completo do DirectQueryEngine
+                st.write("🕵️‍♂️ **DEBUG: Resultado do DirectQueryEngine**")
+                st.json(direct_result)
+
                 # Verificar se o DirectQueryEngine conseguiu processar ou se precisa de fallback
                 if direct_result and direct_result.get("type") != "fallback":
                     # SUCESSO: Usar o resultado do DirectQueryEngine
