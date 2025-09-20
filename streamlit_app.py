@@ -244,67 +244,39 @@ else:
         with st.spinner("O agente está a pensar..."):
             try:
                 # 🚀 PRIORIDADE: Tentar DirectQueryEngine primeiro (mais rápido e eficiente)
-                try:
-                    from core.business_intelligence.direct_query_engine import DirectQueryEngine
-                    from core.connectivity.parquet_adapter import ParquetAdapter
+                # Tentar usar o DirectQueryEngine primeiro
+                from core.business_intelligence.direct_query_engine import DirectQueryEngine
+                from core.connectivity.parquet_adapter import ParquetAdapter
 
-                    adapter = ParquetAdapter('data/parquet/admmat.parquet')
-                    engine = DirectQueryEngine(adapter)
+                adapter = ParquetAdapter('data/parquet/admmat.parquet')
+                engine = DirectQueryEngine(adapter)
+                direct_result = engine.process_query(user_input)
 
-                    # Processar com DirectQueryEngine
-                    direct_result = engine.process_query(user_input)
-
-                    # DEBUG: Log detalhado do resultado
-                    st.write("🔍 DEBUG DirectQueryEngine:")
-                    st.write(f"- Type: {direct_result.get('type', 'unknown')}")
-                    st.write(f"- Title: {direct_result.get('title', 'N/A')}")
-                    st.write(f"- Error: {direct_result.get('error', 'none')}")
-                    st.write(f"- Has result: {'result' in direct_result}")
-
-                    if 'result' in direct_result:
-                        st.write(f"- Result keys: {list(direct_result['result'].keys())}")
-                        if 'chart_data' in direct_result['result']:
-                            chart_data = direct_result['result']['chart_data']
-                            st.write(f"- Chart type: {chart_data.get('type', 'unknown')}")
-                            st.write(f"- Chart X length: {len(chart_data.get('x', []))}")
-                            st.write(f"- Chart Y length: {len(chart_data.get('y', []))}")
-
-                    # Se obteve resultado válido, usar diretamente
-                    if direct_result and not direct_result.get("error"):
-                        agent_response = {
-                            "type": direct_result.get("type", "text"),
-                            "title": direct_result.get("title", ""),
-                            "content": direct_result.get("summary", ""),
-                            "result": direct_result.get("result", {}),
-                            "user_query": user_input,
-                            "method": "direct_query",
-                            "processing_time": direct_result.get("processing_time", 0)
-                        }
-                        st.write("✅ Usando resultado do DirectQueryEngine")
-                    else:
-                        # Se DirectQueryEngine falhou, usar agent_graph como fallback
-                        st.write("❌ DirectQueryEngine falhou, usando fallback")
-                        raise Exception("DirectQueryEngine não conseguiu processar a consulta")
-
-                except Exception as direct_error:
-                    # DEBUG: Mostrar erro específico do DirectQueryEngine
-                    st.write("❌ ERRO no DirectQueryEngine:")
-                    st.write(f"- Tipo: {type(direct_error).__name__}")
-                    st.write(f"- Mensagem: {str(direct_error)}")
-                    import traceback
-                    st.write(f"- Traceback: {traceback.format_exc()[:500]}...")
-
-                    # Fallback para agent_graph se DirectQueryEngine falhar
-                    st.write("🔄 Usando fallback agent_graph...")
+                # Verificar se o DirectQueryEngine conseguiu processar ou se precisa de fallback
+                if direct_result and direct_result.get("type") != "fallback":
+                    # SUCESSO: Usar o resultado do DirectQueryEngine
+                    st.write("✅ Usando resultado do DirectQueryEngine")
+                    agent_response = {
+                        "type": direct_result.get("type", "text"),
+                        "title": direct_result.get("title", ""),
+                        "content": direct_result.get("summary", ""),
+                        "result": direct_result.get("result", {}),
+                        "user_query": user_input,
+                        "method": "direct_query",
+                        "processing_time": direct_result.get("processing_time", 0)
+                    }
+                else:
+                    # FALLBACK: Usar o agent_graph
+                    st.write("🔄 DirectQueryEngine não processou, usando fallback agent_graph...")
                     if not backend_components or not backend_components.get("agent_graph"):
-                        # Fallback: resposta simples se backend não disponível
+                        # Caso de fallback onde o grafo não está disponível
                         agent_response = {
                             "type": "text",
                             "content": f"⚠️ Sistema está sendo inicializado. Tente novamente em alguns segundos.\n\nSe o problema persistir, contate o administrador.",
                             "user_query": user_input
                         }
                     else:
-                        # Usar backend integrado (similar ao main.py)
+                        # Chamar o agent_graph principal
                         initial_state = {"messages": [HumanMessage(content=user_input)]}
                         final_state = backend_components["agent_graph"].invoke(initial_state)
                         agent_response = final_state.get("final_response", {})

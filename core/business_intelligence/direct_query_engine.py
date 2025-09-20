@@ -1168,13 +1168,13 @@ class DirectQueryEngine:
         }
 
     def _query_fallback(self, df: pd.DataFrame, query_type: str, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Fallback para queries não implementadas, agora retorna um erro claro."""
-        logger.warning(f"Consulta não implementada ou não compreendida: {query_type}")
+        """Fallback para queries não implementadas, sinalizando para usar o grafo principal."""
+        logger.warning(f"Consulta não implementada ou não compreendida no DirectQueryEngine: {query_type}. Acionando fallback para o agent_graph.")
         return {
-            "type": "error",
-            "error": "Não entendi a sua pergunta. Por favor, tente reformular usando palavras-chave como 'produto mais vendido', 'vendas do produto [código]', etc.",
-            "summary": "Consulta não compreendida.",
-            "title": "Erro ao Processar Consulta"
+            "type": "fallback",
+            "error": "Consulta não compreendida pelo motor de busca rápida. Usando IA avançada.",
+            "summary": "Acionando fallback para processamento com IA.",
+            "title": "Necessário Processamento Avançado"
         }
 
     def process_query(self, user_query: str) -> Dict[str, Any]:
