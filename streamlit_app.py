@@ -254,6 +254,21 @@ else:
                     # Processar com DirectQueryEngine
                     direct_result = engine.process_query(user_input)
 
+                    # DEBUG: Log detalhado do resultado
+                    st.write("🔍 DEBUG DirectQueryEngine:")
+                    st.write(f"- Type: {direct_result.get('type', 'unknown')}")
+                    st.write(f"- Title: {direct_result.get('title', 'N/A')}")
+                    st.write(f"- Error: {direct_result.get('error', 'none')}")
+                    st.write(f"- Has result: {'result' in direct_result}")
+
+                    if 'result' in direct_result:
+                        st.write(f"- Result keys: {list(direct_result['result'].keys())}")
+                        if 'chart_data' in direct_result['result']:
+                            chart_data = direct_result['result']['chart_data']
+                            st.write(f"- Chart type: {chart_data.get('type', 'unknown')}")
+                            st.write(f"- Chart X length: {len(chart_data.get('x', []))}")
+                            st.write(f"- Chart Y length: {len(chart_data.get('y', []))}")
+
                     # Se obteve resultado válido, usar diretamente
                     if direct_result and not direct_result.get("error"):
                         agent_response = {
@@ -265,12 +280,22 @@ else:
                             "method": "direct_query",
                             "processing_time": direct_result.get("processing_time", 0)
                         }
+                        st.write("✅ Usando resultado do DirectQueryEngine")
                     else:
                         # Se DirectQueryEngine falhou, usar agent_graph como fallback
+                        st.write("❌ DirectQueryEngine falhou, usando fallback")
                         raise Exception("DirectQueryEngine não conseguiu processar a consulta")
 
                 except Exception as direct_error:
+                    # DEBUG: Mostrar erro específico do DirectQueryEngine
+                    st.write("❌ ERRO no DirectQueryEngine:")
+                    st.write(f"- Tipo: {type(direct_error).__name__}")
+                    st.write(f"- Mensagem: {str(direct_error)}")
+                    import traceback
+                    st.write(f"- Traceback: {traceback.format_exc()[:500]}...")
+
                     # Fallback para agent_graph se DirectQueryEngine falhar
+                    st.write("🔄 Usando fallback agent_graph...")
                     if not backend_components or not backend_components.get("agent_graph"):
                         # Fallback: resposta simples se backend não disponível
                         agent_response = {
