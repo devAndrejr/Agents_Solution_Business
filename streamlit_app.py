@@ -43,6 +43,10 @@ def check_admin_login():
 
 def admin_login_form():
     """Formulário de login admin."""
+    # Inicializar session_state se não existir
+    if 'admin_logged_in' not in st.session_state:
+        st.session_state.admin_logged_in = False
+
     st.sidebar.markdown("---")
     st.sidebar.subheader("🔐 Login Admin")
 
@@ -545,6 +549,9 @@ def create_simple_chart(result: Dict[str, Any]):
 # Controle de sessão
 if 'selected_query' not in st.session_state:
     st.session_state.selected_query = ''
+
+if 'admin_logged_in' not in st.session_state:
+    st.session_state.admin_logged_in = False
 
 # Footer
 st.markdown("---")
