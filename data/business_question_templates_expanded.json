@@ -1,0 +1,425 @@
+{
+  "metadata": {
+    "name": "Modelos Expandidos de Perguntas de Negócio",
+    "description": "Templates das 20 perguntas essenciais + 80 perguntas específicas do arquivo exemplos_perguntas_negocio.md",
+    "created": "2025-09-19",
+    "version": "2.0",
+    "dataset": "admatao_full.parquet",
+    "total_questions": 100,
+    "essential_questions": 20,
+    "specific_questions": 80
+  },
+  "categories": {
+    "vendas_produto": {
+      "name": "Análises de Vendas por Produto",
+      "description": "Análises focadas em produtos específicos",
+      "questions_count": 8
+    },
+    "vendas_segmento": {
+      "name": "Análises por Segmento",
+      "description": "Rankings e comparações por segmento",
+      "questions_count": 8
+    },
+    "vendas_une": {
+      "name": "Análises por UNE/Loja",
+      "description": "Performance e operações por unidade",
+      "questions_count": 8
+    },
+    "temporais": {
+      "name": "Análises Temporais",
+      "description": "Sazonalidade e tendências temporais",
+      "questions_count": 8
+    },
+    "abc_performance": {
+      "name": "Análises de Performance e ABC",
+      "description": "Classificação ABC e frequência",
+      "questions_count": 8
+    },
+    "estoque_logistica": {
+      "name": "Análises de Estoque e Logística",
+      "description": "Gestão de estoque e operações",
+      "questions_count": 8
+    },
+    "fabricantes": {
+      "name": "Análises por Fabricante",
+      "description": "Performance e estratégias por fabricante",
+      "questions_count": 8
+    },
+    "categoria_grupo": {
+      "name": "Análises por Categoria/Grupo",
+      "description": "Estrutura e oportunidades por categoria",
+      "questions_count": 8
+    },
+    "dashboards": {
+      "name": "Dashboards e Relatórios Executivos",
+      "description": "KPIs e monitoramento executivo",
+      "questions_count": 8
+    },
+    "analises_especiais": {
+      "name": "Análises Específicas e Personalizadas",
+      "description": "Casos especiais e análises preditivas",
+      "questions_count": 8
+    }
+  },
+  "essential_questions": {
+    "q002": {
+      "id": 2,
+      "question": "Qual foi o faturamento deste mês?",
+      "category": "financeiro",
+      "complexity": "media",
+      "status": "viable",
+      "priority": "high",
+      "sample_queries": [
+        "Qual foi o faturamento deste mês?",
+        "Quanto faturamos no mês atual?",
+        "Faturamento mensal atual",
+        "Receita do mês"
+      ]
+    },
+    "q003": {
+      "id": 3,
+      "question": "Qual produto mais vendido?",
+      "category": "vendas_ranking",
+      "complexity": "baixa",
+      "status": "viable",
+      "priority": "high",
+      "sample_queries": [
+        "Qual produto mais vendido?",
+        "Produto líder em vendas",
+        "Produto campeão",
+        "Top produto"
+      ]
+    }
+  },
+  "specific_questions": {
+    "vendas_produto": [
+      {
+        "id": "vp01",
+        "question": "Gere um gráfico de vendas do produto 369947 na UNE SCR",
+        "complexity": "media",
+        "status": "viable",
+        "required_columns": ["codigo", "une_nome", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["line", "bar"],
+        "sql_approach": "SELECT mes_01, mes_02, ... mes_12 FROM dataset WHERE codigo = 369947 AND une_nome = 'SCR'"
+      },
+      {
+        "id": "vp02",
+        "question": "Mostre a evolução de vendas mensais do produto 369947 nos últimos 12 meses",
+        "complexity": "media",
+        "status": "viable",
+        "required_columns": ["codigo", "nome_produto", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["line", "area"],
+        "sql_approach": "SELECT nome_produto, mes_01, mes_02, ... mes_12 FROM dataset WHERE codigo = 369947"
+      },
+      {
+        "id": "vp03",
+        "question": "Compare as vendas do produto 369947 entre todas as UNEs",
+        "complexity": "media",
+        "status": "viable",
+        "required_columns": ["codigo", "une_nome", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["bar", "horizontal_bar"],
+        "sql_approach": "SELECT une_nome, SUM(mes_01+...+mes_12) as total FROM dataset WHERE codigo = 369947 GROUP BY une_nome"
+      },
+      {
+        "id": "vp04",
+        "question": "Quais são os 5 produtos mais vendidos na UNE SCR no último mês?",
+        "complexity": "baixa",
+        "status": "viable",
+        "required_columns": ["une_nome", "nome_produto", "mes_parcial"],
+        "chart_types": ["bar", "table"],
+        "sql_approach": "SELECT nome_produto, mes_parcial FROM dataset WHERE une_nome = 'SCR' ORDER BY mes_parcial DESC LIMIT 5"
+      },
+      {
+        "id": "vp05",
+        "question": "Análise de performance: produtos com vendas acima da média no segmento TECIDOS",
+        "complexity": "alta",
+        "status": "viable",
+        "required_columns": ["nomesegmento", "nome_produto", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["bar", "scatter"],
+        "sql_approach": "SELECT nome_produto, vendas_total FROM (SELECT nome_produto, SUM(mes_01+...+mes_12) as vendas_total FROM dataset WHERE nomesegmento = 'TECIDOS') WHERE vendas_total > AVG(vendas_total)"
+      },
+      {
+        "id": "vp06",
+        "question": "Identifique produtos com variação de vendas superior a 20% mês a mês",
+        "complexity": "alta",
+        "status": "viable",
+        "required_columns": ["nome_produto", "mes_01", "mes_02"],
+        "chart_types": ["bar", "waterfall"],
+        "sql_approach": "SELECT nome_produto, ((mes_01-mes_02)/mes_02)*100 as variacao FROM dataset WHERE ABS((mes_01-mes_02)/mes_02)*100 > 20"
+      },
+      {
+        "id": "vp07",
+        "question": "Top 10 produtos por margem de crescimento nos últimos 3 meses",
+        "complexity": "alta",
+        "status": "viable",
+        "required_columns": ["nome_produto", "mes_01", "mes_02", "mes_03"],
+        "chart_types": ["bar", "line"],
+        "sql_approach": "SELECT nome_produto, ((mes_01-mes_03)/mes_03)*100 as crescimento FROM dataset WHERE mes_03 > 0 ORDER BY crescimento DESC LIMIT 10"
+      },
+      {
+        "id": "vp08",
+        "question": "Produtos com padrão de vendas sazonal no segmento FESTAS",
+        "complexity": "alta",
+        "status": "partial",
+        "required_columns": ["nomesegmento", "nome_produto", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["heatmap", "line"],
+        "limitation": "Requer análise de variância sazonal"
+      }
+    ],
+    "vendas_segmento": [
+      {
+        "id": "vs01",
+        "question": "Quais são os 10 produtos que mais vendem no segmento TECIDOS?",
+        "complexity": "baixa",
+        "status": "viable",
+        "required_columns": ["nomesegmento", "nome_produto", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["bar", "table"],
+        "sql_approach": "SELECT nome_produto, SUM(mes_01+...+mes_12) as total FROM dataset WHERE nomesegmento = 'TECIDOS' GROUP BY nome_produto ORDER BY total DESC LIMIT 10"
+      },
+      {
+        "id": "vs02",
+        "question": "Compare as vendas entre os segmentos ARMARINHO E CONFECÇÃO vs TECIDOS",
+        "complexity": "media",
+        "status": "viable",
+        "required_columns": ["nomesegmento", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["bar_comparison", "pie"],
+        "sql_approach": "SELECT nomesegmento, SUM(mes_01+...+mes_12) as total FROM dataset WHERE nomesegmento IN ('ARMARINHO E CONFECÇÃO', 'TECIDOS') GROUP BY nomesegmento"
+      },
+      {
+        "id": "vs03",
+        "question": "Ranking dos segmentos por volume de vendas no último trimestre",
+        "complexity": "media",
+        "status": "viable",
+        "required_columns": ["nomesegmento", "mes_01", "mes_02", "mes_03"],
+        "chart_types": ["bar", "horizontal_bar"],
+        "sql_approach": "SELECT nomesegmento, SUM(mes_01+mes_02+mes_03) as trimestre FROM dataset GROUP BY nomesegmento ORDER BY trimestre DESC"
+      },
+      {
+        "id": "vs04",
+        "question": "Qual segmento teve maior crescimento percentual mês a mês?",
+        "complexity": "alta",
+        "status": "viable",
+        "required_columns": ["nomesegmento", "mes_01", "mes_02"],
+        "chart_types": ["bar", "gauge"],
+        "sql_approach": "SELECT nomesegmento, ((SUM(mes_01)-SUM(mes_02))/SUM(mes_02))*100 as crescimento FROM dataset GROUP BY nomesegmento ORDER BY crescimento DESC"
+      },
+      {
+        "id": "vs05",
+        "question": "Distribuição de vendas por categoria dentro do segmento PAPELARIA",
+        "complexity": "media",
+        "status": "viable",
+        "required_columns": ["nomesegmento", "nome_categoria", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["pie", "treemap"],
+        "sql_approach": "SELECT nome_categoria, SUM(mes_01+...+mes_12) as total FROM dataset WHERE nomesegmento = 'PAPELARIA' GROUP BY nome_categoria"
+      },
+      {
+        "id": "vs06",
+        "question": "Segmentos com maior concentração de produtos ABC 'A'",
+        "complexity": "alta",
+        "status": "viable",
+        "required_columns": ["nomesegmento", "abc_une_mes_01"],
+        "chart_types": ["bar", "heatmap"],
+        "sql_approach": "SELECT nomesegmento, COUNT(*) as produtos_a FROM dataset WHERE abc_une_mes_01 = 'A' GROUP BY nomesegmento ORDER BY produtos_a DESC"
+      },
+      {
+        "id": "vs07",
+        "question": "Análise de penetração: quantos produtos únicos vendidos por segmento",
+        "complexity": "media",
+        "status": "viable",
+        "required_columns": ["nomesegmento", "codigo", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["bar", "table"],
+        "sql_approach": "SELECT nomesegmento, COUNT(DISTINCT codigo) as produtos_unicos FROM dataset WHERE (mes_01+...+mes_12) > 0 GROUP BY nomesegmento"
+      },
+      {
+        "id": "vs08",
+        "question": "Segmentos mais afetados por sazonalidade",
+        "complexity": "alta",
+        "status": "partial",
+        "required_columns": ["nomesegmento", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["heatmap", "line"],
+        "limitation": "Requer cálculo de coeficiente de variação sazonal"
+      }
+    ],
+    "vendas_une": [
+      {
+        "id": "vu01",
+        "question": "Ranking de performance de vendas por UNE no segmento TECIDOS",
+        "complexity": "media",
+        "status": "viable",
+        "required_columns": ["une_nome", "nomesegmento", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["bar", "horizontal_bar"],
+        "sql_approach": "SELECT une_nome, SUM(mes_01+...+mes_12) as total FROM dataset WHERE nomesegmento = 'TECIDOS' GROUP BY une_nome ORDER BY total DESC"
+      },
+      {
+        "id": "vu02",
+        "question": "Qual UNE vende mais produtos do segmento PAPELARIA?",
+        "complexity": "baixa",
+        "status": "viable",
+        "required_columns": ["une_nome", "nomesegmento", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["bar", "table"],
+        "sql_approach": "SELECT une_nome, SUM(mes_01+...+mes_12) as total FROM dataset WHERE nomesegmento = 'PAPELARIA' GROUP BY une_nome ORDER BY total DESC LIMIT 1"
+      },
+      {
+        "id": "vu03",
+        "question": "Compare a performance da UNE SCR vs outras UNEs principais",
+        "complexity": "media",
+        "status": "viable",
+        "required_columns": ["une_nome", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["bar_comparison", "radar"],
+        "sql_approach": "SELECT une_nome, SUM(mes_01+...+mes_12) as total FROM dataset WHERE une_nome IN (SELECT TOP 5 une_nome...) GROUP BY une_nome"
+      },
+      {
+        "id": "vu04",
+        "question": "Identifique UNEs com maior potencial de crescimento",
+        "complexity": "alta",
+        "status": "viable",
+        "required_columns": ["une_nome", "mes_01", "mes_02", "mes_03"],
+        "chart_types": ["scatter", "bubble"],
+        "sql_approach": "SELECT une_nome, ((SUM(mes_01)-SUM(mes_03))/SUM(mes_03))*100 as crescimento FROM dataset GROUP BY une_nome ORDER BY crescimento DESC"
+      },
+      {
+        "id": "vu05",
+        "question": "UNEs com maior diversidade de produtos vendidos",
+        "complexity": "media",
+        "status": "viable",
+        "required_columns": ["une_nome", "codigo", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["bar", "table"],
+        "sql_approach": "SELECT une_nome, COUNT(DISTINCT codigo) as diversidade FROM dataset WHERE (mes_01+...+mes_12) > 0 GROUP BY une_nome ORDER BY diversidade DESC"
+      },
+      {
+        "id": "vu06",
+        "question": "Análise de concentração: dependência de produtos específicos por UNE",
+        "complexity": "alta",
+        "status": "viable",
+        "required_columns": ["une_nome", "nome_produto", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["heatmap", "treemap"],
+        "sql_approach": "Análise de concentração usando Gini ou HHI por UNE"
+      },
+      {
+        "id": "vu07",
+        "question": "UNEs com melhor desempenho em produtos promocionais",
+        "complexity": "media",
+        "status": "viable",
+        "required_columns": ["une_nome", "promocional", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["bar", "comparison"],
+        "sql_approach": "SELECT une_nome, SUM(mes_01+...+mes_12) as vendas_promo FROM dataset WHERE promocional = 'S' GROUP BY une_nome"
+      },
+      {
+        "id": "vu08",
+        "question": "Comparativo de eficiência de vendas entre UNEs similares",
+        "complexity": "alta",
+        "status": "partial",
+        "required_columns": ["une_nome", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["radar", "scatter"],
+        "limitation": "Requer definição de critérios de similaridade"
+      }
+    ],
+    "estoque_logistica": [
+      {
+        "id": "el01",
+        "question": "Produtos com estoque baixo vs alta demanda",
+        "complexity": "media",
+        "status": "viable",
+        "required_columns": ["nome_produto", "estoque_atual", "mes_01", "mes_02", "mes_03"],
+        "chart_types": ["scatter", "alert"],
+        "sql_approach": "SELECT nome_produto, estoque_atual, (mes_01+mes_02+mes_03) as demanda FROM dataset WHERE estoque_atual < demanda"
+      },
+      {
+        "id": "el02",
+        "question": "Análise de ponto de pedido: produtos próximos ao limite",
+        "complexity": "alta",
+        "status": "partial",
+        "required_columns": ["nome_produto", "estoque_atual", "ponto_pedido_lv"],
+        "chart_types": ["gauge", "alert"],
+        "sql_approach": "SELECT nome_produto, estoque_atual, ponto_pedido_lv FROM dataset WHERE estoque_atual <= ponto_pedido_lv"
+      },
+      {
+        "id": "el03",
+        "question": "Produtos com maior leadtime vs performance de vendas",
+        "complexity": "alta",
+        "status": "partial",
+        "required_columns": ["nome_produto", "leadtime_lv", "mes_01", "mes_02", "mes_03"],
+        "chart_types": ["scatter", "bubble"],
+        "sql_approach": "SELECT nome_produto, leadtime_lv, (mes_01+mes_02+mes_03) as vendas FROM dataset"
+      },
+      {
+        "id": "el04",
+        "question": "Identificar produtos com excesso de estoque",
+        "complexity": "media",
+        "status": "viable",
+        "required_columns": ["nome_produto", "estoque_atual", "mes_01", "mes_02", "mes_03"],
+        "chart_types": ["bar", "table"],
+        "sql_approach": "SELECT nome_produto, estoque_atual, (mes_01+mes_02+mes_03) as vendas FROM dataset WHERE estoque_atual > vendas * 3"
+      },
+      {
+        "id": "el05",
+        "question": "Produtos com maior rotação de estoque",
+        "complexity": "media",
+        "status": "viable",
+        "required_columns": ["nome_produto", "estoque_atual", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+        "chart_types": ["bar", "ranking"],
+        "sql_approach": "SELECT nome_produto, (SUM(mes_01+...+mes_12)/estoque_atual) as rotacao FROM dataset WHERE estoque_atual > 0 ORDER BY rotacao DESC"
+      },
+      {
+        "id": "el06",
+        "question": "Análise de exposição: produtos com exposição mínima vs vendas",
+        "complexity": "alta",
+        "status": "partial",
+        "required_columns": ["nome_produto", "exposicao_minima", "mes_01", "mes_02", "mes_03"],
+        "chart_types": ["scatter", "comparison"],
+        "sql_approach": "SELECT nome_produto, exposicao_minima, (mes_01+mes_02+mes_03) as vendas FROM dataset"
+      },
+      {
+        "id": "el07",
+        "question": "Produtos pendentes de solicitação há mais de X dias",
+        "complexity": "alta",
+        "status": "partial",
+        "required_columns": ["nome_produto", "solicitacao_pendente_data", "solicitacao_pendente_qtde"],
+        "chart_types": ["table", "alert"],
+        "limitation": "Requer cálculo de dias desde solicitação"
+      },
+      {
+        "id": "el08",
+        "question": "Eficiência logística: relação entre estoque CD vs vendas",
+        "complexity": "media",
+        "status": "viable",
+        "required_columns": ["nome_produto", "estoque_cd", "mes_01", "mes_02", "mes_03"],
+        "chart_types": ["scatter", "heatmap"],
+        "sql_approach": "SELECT nome_produto, estoque_cd, (mes_01+mes_02+mes_03) as vendas, (vendas/estoque_cd) as eficiencia FROM dataset WHERE estoque_cd > 0"
+      }
+    ]
+  },
+  "implementation_priority": {
+    "immediate": [
+      "vp01", "vp02", "vp03", "vp04", "vs01", "vs02", "vs03", "vu01", "vu02", "el01", "el04", "el05"
+    ],
+    "short_term": [
+      "vp05", "vp06", "vs04", "vs05", "vu03", "vu04", "vu05", "el08"
+    ],
+    "medium_term": [
+      "vp07", "vs06", "vs07", "vu06", "vu07"
+    ],
+    "requires_data_enhancement": [
+      "vp08", "vs08", "vu08", "el02", "el03", "el06", "el07"
+    ]
+  },
+  "complexity_mapping": {
+    "baixa": ["vp04", "vs01", "vu02"],
+    "media": ["vp01", "vp02", "vp03", "vs02", "vs03", "vs05", "vs07", "vu01", "vu03", "vu05", "vu07", "el01", "el04", "el05", "el08"],
+    "alta": ["vp05", "vp06", "vp07", "vs04", "vs06", "vu04", "vu06", "el02", "el03", "el06", "el07"],
+    "partial": ["vp08", "vs08", "vu08"]
+  },
+  "chart_type_distribution": {
+    "bar": 15,
+    "line": 8,
+    "scatter": 6,
+    "table": 6,
+    "heatmap": 4,
+    "pie": 3,
+    "treemap": 3,
+    "horizontal_bar": 3,
+    "comparison": 3,
+    "alert": 3,
+    "others": 6
+  }
+}

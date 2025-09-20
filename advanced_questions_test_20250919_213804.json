@@ -1,0 +1,69 @@
+{
+  "timestamp": "20250919_213804",
+  "dataset_info": {
+    "rows": 1113822,
+    "columns": 95
+  },
+  "tests_summary": {
+    "total": 6,
+    "success": 6,
+    "partial": 0,
+    "failed": 0,
+    "error": 0,
+    "success_rate": 100.0
+  },
+  "test_results": [
+    {
+      "test": "VP01",
+      "status": "success",
+      "details": "Vendas: 24351"
+    },
+    {
+      "test": "VS01",
+      "status": "success",
+      "details": "Top: TNT 40GRS 100%O LG 1.40 035 BRANCO"
+    },
+    {
+      "test": "VU01",
+      "status": "success",
+      "details": "Top UNE: 261"
+    },
+    {
+      "test": "EL01",
+      "status": "success",
+      "details": "399112 produtos identificados"
+    },
+    {
+      "test": "VP06",
+      "status": "success",
+      "details": "425098 produtos com alta variação"
+    },
+    {
+      "test": "VU05",
+      "status": "success",
+      "details": "Top UNE: 261 (59900 produtos)"
+    }
+  ],
+  "available_columns": [
+    "une",
+    "codigo",
+    "tipo",
+    "une_nome",
+    "nome_produto",
+    "embalagem",
+    "nomesegmento",
+    "nome_categoria",
+    "nomegrupo",
+    "nome_subgrupo",
+    "nome_fabricante",
+    "ean",
+    "promocional",
+    "foralinha",
+    "preco_38_percent",
+    "qtde_emb_master",
+    "qtde_emb_multiplo",
+    "abc_une_mes_04",
+    "abc_une_mes_03",
+    "abc_une_mes_02"
+  ]
+}
