@@ -321,7 +321,7 @@ class DirectQueryEngine:
 
         try:
             # 🔧 FIX CRÍTICO: Para consultas específicas de produtos, carregar dataset completo
-            full_dataset_queries = ["consulta_produto_especifico", "consulta_une_especifica", "evolucao_vendas_produto", "produto_vendas_une_barras", "produto_vendas_todas_unes", "preco_produto_une_especifica", "top_produtos_une_especifica", "vendas_une_mes_especifico", "ranking_vendas_unes", "produto_mais_vendido_cada_une"]
+            full_dataset_queries = ["consulta_produto_especifico", "consulta_une_especifica", "evolucao_vendas_produto", "produto_vendas_une_barras", "produto_vendas_todas_unes", "preco_produto_une_especifica", "top_produtos_une_especifica", "vendas_une_mes_especifico", "ranking_vendas_unes", "produto_mais_vendido_cada_une", "top_produtos_por_segmento"]
             use_full_dataset = query_type in full_dataset_queries
 
             if use_full_dataset:
