@@ -317,18 +317,35 @@ else:
                     st.caption(f"📝 Pergunta: {user_query}")
 
                 try:
-                    if isinstance(content, str):
+                    # DEBUG: Verificar estrutura de dados
+                    st.write("DEBUG - Response data keys:", list(response_data.keys()))
+                    st.write("DEBUG - Content type:", type(content))
+
+                    # Para gráficos chart_data está em response_data['result']['chart_data']
+                    if 'result' in response_data and 'chart_data' in response_data['result']:
+                        chart_data = response_data['result']['chart_data']
+                        st.write("DEBUG - Usando chart_data do result")
+                    elif isinstance(content, str):
                         # Se content é string JSON, parse para objeto
                         chart_data = json.loads(content)
+                        st.write("DEBUG - Parsed content as JSON")
                     else:
                         # Se content já é dict, usa diretamente
                         chart_data = content
+                        st.write("DEBUG - Using content directly")
+
+                    st.write("DEBUG - Chart data:", chart_data)
 
                     # Criar gráfico melhorado com cores e interatividade
                     chart_type = chart_data.get("type", "bar")
                     x_data = chart_data.get("x", [])
                     y_data = chart_data.get("y", [])
                     colors = chart_data.get("colors", None)
+
+                    st.write(f"DEBUG - X data length: {len(x_data)}")
+                    st.write(f"DEBUG - Y data length: {len(y_data)}")
+                    st.write(f"DEBUG - X data: {x_data}")
+                    st.write(f"DEBUG - Y data: {y_data}")
 
                     if chart_type == "bar":
                         # Gráfico de barras com melhorias visuais
