@@ -1,0 +1,346 @@
+{
+  "metadata": {
+    "name": "Modelos de Perguntas Essenciais do Negócio",
+    "description": "Templates das 20 perguntas mais importantes para tomada de decisão",
+    "created": "2025-09-19",
+    "version": "1.0",
+    "dataset": "admatao_full.parquet",
+    "viability_rate": "60%"
+  },
+  "categories": {
+    "vendas_ranking": {
+      "name": "Rankings de Vendas",
+      "description": "Análises de produtos, filiais e categorias mais vendidas"
+    },
+    "estoque_gestao": {
+      "name": "Gestão de Estoque",
+      "description": "Análises de estoque, reposição e produtos parados"
+    },
+    "comparativo_temporal": {
+      "name": "Comparações Temporais",
+      "description": "Análises de evolução e comparação entre períodos"
+    },
+    "segmentacao": {
+      "name": "Segmentação",
+      "description": "Análises por segmento, grupo e fornecedor"
+    },
+    "financeiro": {
+      "name": "Análises Financeiras",
+      "description": "Faturamento, margem e ticket médio"
+    }
+  },
+  "viable_questions": {
+    "q002": {
+      "id": 2,
+      "question": "Qual foi o faturamento deste mês?",
+      "category": "financeiro",
+      "complexity": "media",
+      "status": "viable",
+      "sql_approach": "SELECT SUM(mes_parcial * preco_38_percent) as faturamento FROM dataset",
+      "required_columns": ["mes_parcial", "preco_38_percent"],
+      "sample_queries": [
+        "Qual foi o faturamento deste mês?",
+        "Quanto faturamos no mês atual?",
+        "Qual o faturamento parcial do mês?",
+        "Mostrar faturamento mensal atual"
+      ],
+      "chart_types": ["value", "bar", "gauge"],
+      "expected_response_format": "valor_monetario"
+    },
+    "q003": {
+      "id": 3,
+      "question": "Qual produto mais vendido?",
+      "category": "vendas_ranking",
+      "complexity": "baixa",
+      "status": "viable",
+      "sql_approach": "SELECT nome_produto, SUM(mes_01+mes_02+...+mes_12) as total FROM dataset GROUP BY nome_produto ORDER BY total DESC LIMIT 1",
+      "required_columns": ["nome_produto", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+      "sample_queries": [
+        "Qual produto mais vendido?",
+        "Produto com maior volume de vendas",
+        "Qual o produto líder em vendas?",
+        "Top 1 produto em vendas",
+        "Produto campeão de vendas"
+      ],
+      "chart_types": ["bar", "horizontal_bar", "table"],
+      "expected_response_format": "ranking_produtos"
+    },
+    "q004": {
+      "id": 4,
+      "question": "Quais produtos não venderam?",
+      "category": "vendas_ranking",
+      "complexity": "baixa",
+      "status": "viable",
+      "sql_approach": "SELECT nome_produto FROM dataset WHERE (mes_01+mes_02+...+mes_12) = 0",
+      "required_columns": ["nome_produto", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+      "sample_queries": [
+        "Quais produtos não venderam?",
+        "Produtos sem movimento",
+        "Produtos com vendas zero",
+        "Produtos parados",
+        "Lista de produtos sem vendas"
+      ],
+      "chart_types": ["table", "count"],
+      "expected_response_format": "lista_produtos"
+    },
+    "q005": {
+      "id": 5,
+      "question": "Tem algum produto que precisa de reposição?",
+      "category": "estoque_gestao",
+      "complexity": "media",
+      "status": "viable",
+      "sql_approach": "SELECT nome_produto, estoque_atual FROM dataset WHERE estoque_atual < limite_minimo",
+      "required_columns": ["nome_produto", "estoque_atual"],
+      "sample_queries": [
+        "Tem produto que precisa reposição?",
+        "Produtos com estoque baixo",
+        "Produtos para repor",
+        "Estoque mínimo atingido",
+        "Produtos em falta"
+      ],
+      "chart_types": ["table", "alert", "bar"],
+      "expected_response_format": "lista_produtos_estoque"
+    },
+    "q008": {
+      "id": 8,
+      "question": "Qual filial mais vendeu?",
+      "category": "vendas_ranking",
+      "complexity": "baixa",
+      "status": "viable",
+      "sql_approach": "SELECT une_nome, SUM(mes_01+mes_02+...+mes_12) as total FROM dataset GROUP BY une_nome ORDER BY total DESC LIMIT 1",
+      "required_columns": ["une_nome", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+      "sample_queries": [
+        "Qual filial mais vendeu?",
+        "Filial líder em vendas",
+        "Unidade com maior volume",
+        "Top filial em vendas",
+        "Filial campeã"
+      ],
+      "chart_types": ["bar", "map", "pie"],
+      "expected_response_format": "ranking_filiais"
+    },
+    "q009": {
+      "id": 9,
+      "question": "Qual foi o segmento que mais vendeu este mês?",
+      "category": "segmentacao",
+      "complexity": "media",
+      "status": "viable",
+      "sql_approach": "SELECT nomesegmento, SUM(mes_parcial) as vendas FROM dataset GROUP BY nomesegmento ORDER BY vendas DESC LIMIT 1",
+      "required_columns": ["nomesegmento", "mes_parcial"],
+      "sample_queries": [
+        "Qual segmento mais vendeu este mês?",
+        "Segmento líder no mês",
+        "Top segmento mensal",
+        "Segmento campeão do mês",
+        "Maior segmento em vendas"
+      ],
+      "chart_types": ["pie", "bar", "donut"],
+      "expected_response_format": "ranking_segmentos"
+    },
+    "q010": {
+      "id": 10,
+      "question": "Quanto vendemos no mesmo período do mês passado?",
+      "category": "comparativo_temporal",
+      "complexity": "alta",
+      "status": "viable",
+      "sql_approach": "SELECT SUM(mes_02) as mes_anterior, SUM(mes_01) as mes_atual FROM dataset",
+      "required_columns": ["mes_01", "mes_02"],
+      "sample_queries": [
+        "Quanto vendemos mês passado?",
+        "Vendas do mês anterior",
+        "Comparar com mês passado",
+        "Evolução mensal de vendas",
+        "Variação mes a mês"
+      ],
+      "chart_types": ["line", "bar_comparison", "gauge"],
+      "expected_response_format": "comparacao_temporal"
+    },
+    "q013": {
+      "id": 13,
+      "question": "Qual produto mais vendido em cada filial?",
+      "category": "vendas_ranking",
+      "complexity": "media",
+      "status": "viable",
+      "sql_approach": "SELECT une_nome, nome_produto, MAX(vendas_total) FROM (SELECT une_nome, nome_produto, SUM(mes_01+...+mes_12) as vendas_total FROM dataset GROUP BY une_nome, nome_produto) GROUP BY une_nome",
+      "required_columns": ["une_nome", "nome_produto", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+      "sample_queries": [
+        "Produto mais vendido por filial",
+        "Top produto de cada unidade",
+        "Líder por filial",
+        "Produto campeão por UNE",
+        "Ranking por unidade"
+      ],
+      "chart_types": ["table", "grouped_bar", "heatmap"],
+      "expected_response_format": "ranking_produtos_por_filial"
+    },
+    "q014": {
+      "id": 14,
+      "question": "Qual fornecedor mais representativo nas compras?",
+      "category": "segmentacao",
+      "complexity": "media",
+      "status": "viable",
+      "sql_approach": "SELECT nome_fabricante, SUM(mes_01+...+mes_12) as volume FROM dataset GROUP BY nome_fabricante ORDER BY volume DESC LIMIT 1",
+      "required_columns": ["nome_fabricante", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+      "sample_queries": [
+        "Qual fornecedor mais representativo?",
+        "Fabricante líder",
+        "Top fornecedor",
+        "Fabricante com maior volume",
+        "Fornecedor principal"
+      ],
+      "chart_types": ["pie", "bar", "treemap"],
+      "expected_response_format": "ranking_fornecedores"
+    },
+    "q015": {
+      "id": 15,
+      "question": "Qual produto com maior giro de estoque?",
+      "category": "estoque_gestao",
+      "complexity": "alta",
+      "status": "viable",
+      "sql_approach": "SELECT nome_produto, (SUM(mes_01+...+mes_12)/estoque_atual) as giro FROM dataset WHERE estoque_atual > 0 ORDER BY giro DESC LIMIT 1",
+      "required_columns": ["nome_produto", "estoque_atual", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+      "sample_queries": [
+        "Produto com maior giro?",
+        "Produto de alta rotatividade",
+        "Maior giro de estoque",
+        "Produto com melhor giro",
+        "Alta rotatividade de estoque"
+      ],
+      "chart_types": ["bar", "scatter", "table"],
+      "expected_response_format": "ranking_giro_estoque"
+    },
+    "q016": {
+      "id": 16,
+      "question": "Quanto temos de estoque parado (sem giro)?",
+      "category": "estoque_gestao",
+      "complexity": "media",
+      "status": "viable",
+      "sql_approach": "SELECT COUNT(*) as produtos_parados, SUM(estoque_atual) as qtd_parada FROM dataset WHERE estoque_atual > 0 AND (mes_01+...+mes_12) = 0",
+      "required_columns": ["estoque_atual", "mes_01", "mes_02", "mes_03", "mes_04", "mes_05", "mes_06", "mes_07", "mes_08", "mes_09", "mes_10", "mes_11", "mes_12"],
+      "sample_queries": [
+        "Estoque parado",
+        "Produtos sem giro",
+        "Estoque sem movimento",
+        "Produtos encalhados",
+        "Estoque morto"
+      ],
+      "chart_types": ["gauge", "bar", "alert"],
+      "expected_response_format": "valor_estoque_parado"
+    },
+    "q019": {
+      "id": 19,
+      "question": "Quais produtos tiveram queda nas vendas em relação ao mês anterior?",
+      "category": "comparativo_temporal",
+      "complexity": "media",
+      "status": "viable",
+      "sql_approach": "SELECT nome_produto, mes_02 as mes_anterior, mes_01 as mes_atual, ((mes_01-mes_02)/mes_02)*100 as variacao FROM dataset WHERE mes_02 > 0 AND mes_01 < mes_02",
+      "required_columns": ["nome_produto", "mes_01", "mes_02"],
+      "sample_queries": [
+        "Produtos em queda",
+        "Produtos com vendas decrescentes",
+        "Queda de vendas mensais",
+        "Produtos em declínio",
+        "Variação negativa de vendas"
+      ],
+      "chart_types": ["table", "bar", "waterfall"],
+      "expected_response_format": "lista_produtos_em_queda"
+    }
+  },
+  "non_viable_questions": {
+    "q001": {
+      "id": 1,
+      "question": "Quanto vendemos ontem?",
+      "category": "vendas_temporais",
+      "status": "not_viable",
+      "limitation": "Sem dados de timestamp detalhado",
+      "required_data": "Vendas com data/hora exata",
+      "workaround": "Usar vendas do mês parcial como aproximação"
+    },
+    "q006": {
+      "id": 6,
+      "question": "Qual grupo mais vendeu essa semana?",
+      "category": "vendas_temporais",
+      "status": "not_viable",
+      "limitation": "Sem dados semanais",
+      "required_data": "Vendas agrupadas por semana",
+      "workaround": "Usar dados mensais como aproximação"
+    },
+    "q007": {
+      "id": 7,
+      "question": "Batemos a meta do mês?",
+      "category": "metas_performance",
+      "status": "not_viable",
+      "limitation": "Sem dados de metas",
+      "required_data": "Metas mensais por categoria/produto",
+      "workaround": "Definir metas baseadas em histórico"
+    },
+    "q011": {
+      "id": 11,
+      "question": "Qual margem de lucro média este mês?",
+      "category": "financeiro",
+      "status": "not_viable",
+      "limitation": "Sem dados de custo",
+      "required_data": "Custo unitário dos produtos",
+      "workaround": "Usar preço como proxy de performance"
+    },
+    "q012": {
+      "id": 12,
+      "question": "Quais produtos deram maior lucro?",
+      "category": "financeiro",
+      "status": "not_viable",
+      "limitation": "Sem dados de custo",
+      "required_data": "Custo unitário dos produtos",
+      "workaround": "Usar faturamento (preço * vendas)"
+    },
+    "q017": {
+      "id": 17,
+      "question": "Quais produtos estão com margem baixa?",
+      "category": "financeiro",
+      "status": "not_viable",
+      "limitation": "Sem dados de margem",
+      "required_data": "Custo e margem mínima aceitável",
+      "workaround": "Análise por preço médio da categoria"
+    },
+    "q018": {
+      "id": 18,
+      "question": "Qual previsão de faturamento até o fim do mês?",
+      "category": "previsao",
+      "status": "not_viable",
+      "limitation": "Requer modelo preditivo",
+      "required_data": "Histórico temporal detalhado + modelo ML",
+      "workaround": "Projeção linear baseada no mês parcial"
+    },
+    "q020": {
+      "id": 20,
+      "question": "Qual foi o ticket médio das vendas este mês?",
+      "category": "financeiro",
+      "status": "not_viable",
+      "limitation": "Sem número de transações",
+      "required_data": "Quantidade de transações por período",
+      "workaround": "Usar preço médio dos produtos vendidos"
+    }
+  },
+  "implementation_guide": {
+    "priority_order": [
+      "q003", "q008", "q004", "q016", "q009", "q002",
+      "q013", "q014", "q005", "q015", "q010", "q019"
+    ],
+    "complexity_levels": {
+      "easy": ["q003", "q004", "q008"],
+      "medium": ["q002", "q005", "q009", "q013", "q014", "q016", "q019"],
+      "hard": ["q010", "q015"]
+    },
+    "chart_recommendations": {
+      "rankings": ["bar", "horizontal_bar", "table"],
+      "comparisons": ["line", "bar_comparison", "waterfall"],
+      "distributions": ["pie", "donut", "treemap"],
+      "alerts": ["gauge", "alert", "indicator"]
+    },
+    "response_formats": {
+      "valor_monetario": "R$ XX.XXX,XX",
+      "ranking_produtos": "Produto: NOME | Vendas: XXX",
+      "lista_produtos": ["Produto 1", "Produto 2", "..."],
+      "comparacao_temporal": "Atual: XXX | Anterior: XXX | Variação: X%"
+    }
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "timestamp": "20250919_211256",
+  "dataset_rows": 1113822,
+  "dataset_columns": 95,
+  "total_questions": 20,
+  "viable_questions": 12,
+  "success_rate": 60.0,
+  "questions": [
+    {
+      "id": 1,
+      "pergunta": "Quanto vendemos ontem?",
+      "viavel": false,
+      "motivo": "Sem dados de data/timestamp"
+    },
+    {
+      "id": 2,
+      "pergunta": "Qual foi o faturamento deste mes?",
+      "viavel": true,
+      "motivo": "mes_parcial * preco_38_percent"
+    },
+    {
+      "id": 3,
+      "pergunta": "Qual produto mais vendido?",
+      "viavel": true,
+      "motivo": "Soma vendas mensais por produto"
+    },
+    {
+      "id": 4,
+      "pergunta": "Quais produtos nao venderam?",
+      "viavel": true,
+      "motivo": "Filtrar vendas = 0"
+    },
+    {
+      "id": 5,
+      "pergunta": "Tem produto que precisa reposicao?",
+      "viavel": true,
+      "motivo": "Analisar estoque_atual"
+    },
+    {
+      "id": 6,
+      "pergunta": "Qual grupo mais vendeu essa semana?",
+      "viavel": false,
+      "motivo": "Sem dados semanais"
+    },
+    {
+      "id": 7,
+      "pergunta": "Batemos a meta do mes?",
+      "viavel": false,
+      "motivo": "Sem dados de metas"
+    },
+    {
+      "id": 8,
+      "pergunta": "Qual filial mais vendeu?",
+      "viavel": true,
+      "motivo": "Agrupamento por une_nome"
+    },
+    {
+      "id": 9,
+      "pergunta": "Qual segmento mais vendeu este mes?",
+      "viavel": true,
+      "motivo": "Agrupamento por nomesegmento"
+    },
+    {
+      "id": 10,
+      "pergunta": "Quanto vendemos mes passado?",
+      "viavel": true,
+      "motivo": "Comparar mes_01 vs mes_02"
+    },
+    {
+      "id": 11,
+      "pergunta": "Qual margem de lucro media?",
+      "viavel": false,
+      "motivo": "Sem dados de custo"
+    },
+    {
+      "id": 12,
+      "pergunta": "Produtos com maior lucro?",
+      "viavel": false,
+      "motivo": "Sem dados de custo"
+    },
+    {
+      "id": 13,
+      "pergunta": "Produto mais vendido por filial?",
+      "viavel": true,
+      "motivo": "Ranking por UNE"
+    },
+    {
+      "id": 14,
+      "pergunta": "Fornecedor mais representativo?",
+      "viavel": true,
+      "motivo": "Agrupamento por fabricante"
+    },
+    {
+      "id": 15,
+      "pergunta": "Produto com maior giro?",
+      "viavel": true,
+      "motivo": "vendas/estoque_atual"
+    },
+    {
+      "id": 16,
+      "pergunta": "Estoque parado?",
+      "viavel": true,
+      "motivo": "estoque > 0 e vendas = 0"
+    },
+    {
+      "id": 17,
+      "pergunta": "Produtos com margem baixa?",
+      "viavel": false,
+      "motivo": "Sem dados de margem"
+    },
+    {
+      "id": 18,
+      "pergunta": "Previsao faturamento?",
+      "viavel": false,
+      "motivo": "Requer analise preditiva"
+    },
+    {
+      "id": 19,
+      "pergunta": "Produtos em queda?",
+      "viavel": true,
+      "motivo": "Comparar mes_01 vs mes_02"
+    },
+    {
+      "id": 20,
+      "pergunta": "Ticket medio das vendas?",
+      "viavel": false,
+      "motivo": "Sem numero de transacoes"
+    }
+  ],
+  "available_columns": [
+    "une",
+    "codigo",
+    "tipo",
+    "une_nome",
+    "nome_produto",
+    "embalagem",
+    "nomesegmento",
+    "nome_categoria",
+    "nomegrupo",
+    "nome_subgrupo",
+    "nome_fabricante",
+    "ean",
+    "promocional",
+    "foralinha",
+    "preco_38_percent",
+    "qtde_emb_master",
+    "qtde_emb_multiplo",
+    "abc_une_mes_04",
+    "abc_une_mes_03",
+    "abc_une_mes_02"
+  ]
+}
