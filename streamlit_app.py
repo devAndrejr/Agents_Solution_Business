@@ -369,7 +369,7 @@ else:
                         else:
                             # Fallback para formato personalizado sem dados
                             st.error("Dados do gráfico não disponíveis")
-                            return
+                            continue
                     else:
                         # Formato Plotly padrão (já completo)
                         if isinstance(content, str):
