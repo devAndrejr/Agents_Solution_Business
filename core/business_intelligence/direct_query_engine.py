@@ -199,7 +199,7 @@ class DirectQueryEngine:
                 return result
 
             # ALTA PRIORIDADE: Detectar consultas de TOP PRODUTOS em UNE específica
-            top_produtos_une_match = re.search(r'(\d+)\s*produtos\s*mais\s*vendidos.*une\s*([A-Za-z0-9]+)', query_lower)
+            top_produtos_une_match = re.search(r'(\d+)\s*produtos\s*mais\s*vendidos\s+na\s+une\s+([A-Za-z0-9]+)\b', query_lower)
             if top_produtos_une_match:
                 limite = int(top_produtos_une_match.group(1))
                 une_nome = top_produtos_une_match.group(2).upper()
@@ -895,11 +895,13 @@ class DirectQueryEngine:
             df_filtered = df
             segmento_real = "Todos os Segmentos"
 
-        # Agrupar por produto e somar vendas
-        produtos_vendas = df_filtered.groupby(['codigo', 'nome_produto', 'nomesegmento']).agg({
-            'vendas_total': 'sum',
-            'preco_38_percent': 'first'
-        }).reset_index()
+        # Agrupar por produto e somar vendas (OTIMIZADO para evitar erro de memória)
+        produtos_vendas = df_filtered.groupby('codigo').agg(
+            vendas_total=('vendas_total', 'sum'),
+            nome_produto=('nome_produto', 'first'),
+            nomesegmento=('nomesegmento', 'first'),
+            preco_38_percent=('preco_38_percent', 'first')
+        ).reset_index()
 
         # Pegar top N produtos
         top_produtos = produtos_vendas.nlargest(limit, 'vendas_total')
