@@ -1,6 +1,7 @@
-"Motor de Consultas Diretas - Zero LLM para Economia Máxima"
+"""
+Motor de Consultas Diretas - Zero LLM para Economia Máxima
 Sistema que executa consultas pré-definidas sem usar tokens da LLM.
-"
+"""
 
 import pandas as pd
 import json
@@ -137,11 +138,9 @@ class DirectQueryEngine:
         current_time = datetime.now()
 
         # Cache por 5 minutos
-        if (
-            self._cache_timestamp is None
-            or (current_time - self._cache_timestamp).seconds > 300
-            or cache_key not in self._cached_data
-        ):
+        if (self._cache_timestamp is None or
+            (current_time - self._cache_timestamp).seconds > 300 or
+            cache_key not in self._cached_data):
 
             if full_dataset:
                 logger.info("Carregando dataset COMPLETO - necessário para consulta específica")
