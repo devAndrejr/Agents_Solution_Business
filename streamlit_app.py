@@ -408,8 +408,15 @@ else:
                         # Usar gráfico Plotly diretamente
                         fig = go.Figure(chart_data)
 
-                    # Renderizar gráfico
-                    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True})
+                    # Renderizar gráfico com chave única para evitar conflitos
+                    import hashlib
+                    import time
+
+                    # Gerar chave única baseada na query e timestamp
+                    user_query = response_data.get("user_query", "")
+                    chart_key = hashlib.md5(f"{user_query}_{time.time()}".encode()).hexdigest()[:8]
+
+                    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True}, key=f"chart_{chart_key}")
 
                     # Mostrar informações adicionais
                     result_info = response_data.get("result", {})

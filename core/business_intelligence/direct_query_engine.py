@@ -198,6 +198,15 @@ class DirectQueryEngine:
                 logger.info(f"CLASSIFICADO COMO: preco_produto_une_especifica (produto: {produto_codigo}, une: {une_nome})")
                 return result
 
+            # ALTA PRIORIDADE: Detectar consultas de TOP PRODUTOS em UNE específica
+            top_produtos_une_match = re.search(r'(\d+)\s*produtos\s*mais\s*vendidos.*une\s*([A-Za-z0-9]+)', query_lower)
+            if top_produtos_une_match:
+                limite = int(top_produtos_une_match.group(1))
+                une_nome = top_produtos_une_match.group(2).upper()
+                result = ("top_produtos_une_especifica", {"limite": limite, "une_nome": une_nome})
+                logger.info(f"CLASSIFICADO COMO: top_produtos_une_especifica (limite: {limite}, une: {une_nome})")
+                return result
+
             # CORREÇÃO: Detectar GRÁFICO DE BARRAS para produto em TODAS AS UNEs (MAIOR PRIORIDADE)
             product_all_unes_match = re.search(r'(gr[áa]fico.*barras?|barras?).*produto\s*(\d{5,7}).*(todas.*unes?|todas.*filiais?)', query_lower)
             if product_all_unes_match:
@@ -282,7 +291,7 @@ class DirectQueryEngine:
 
         try:
             # 🔧 FIX CRÍTICO: Para consultas específicas de produtos, carregar dataset completo
-            full_dataset_queries = ["consulta_produto_especifico", "consulta_une_especifica", "evolucao_vendas_produto", "produto_vendas_une_barras", "produto_vendas_todas_unes", "preco_produto_une_especifica"]
+            full_dataset_queries = ["consulta_produto_especifico", "consulta_une_especifica", "evolucao_vendas_produto", "produto_vendas_une_barras", "produto_vendas_todas_unes", "preco_produto_une_especifica", "top_produtos_une_especifica"]
             use_full_dataset = query_type in full_dataset_queries
 
             if use_full_dataset:
@@ -564,6 +573,98 @@ class DirectQueryEngine:
             "title": f"Preço do Produto {produto_codigo} na UNE {une_nome}",
             "result": produto_info,
             "summary": f"Produto '{produto_info['nome']}' na UNE {une_nome}: R$ {preco:.2f}",
+            "tokens_used": 0
+        }
+
+    def _query_top_produtos_une_especifica(self, df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Query: Top N produtos mais vendidos em UNE específica."""
+        limite = params.get('limite', 10)
+        une_nome = params.get('une_nome')
+
+        if 'vendas_total' not in df.columns:
+            return {"error": "Dados de vendas não disponíveis", "type": "error"}
+
+        # Verificar se UNE existe
+        une_data = df[df['une_nome'] == une_nome]
+        if une_data.empty:
+            unes_disponiveis = df['une_nome'].unique()
+            return {
+                "error": f"UNE {une_nome} não encontrada",
+                "type": "error",
+                "suggestion": f"UNEs disponíveis: {', '.join(unes_disponiveis[:10])}"
+            }
+
+        # Filtrar apenas produtos da UNE específica com vendas > 0
+        produtos_une = une_data[une_data['vendas_total'] > 0].copy()
+
+        if produtos_une.empty:
+            return {
+                "error": f"Nenhum produto com vendas encontrado na UNE {une_nome}",
+                "type": "error"
+            }
+
+        # Agrupar por produto para evitar duplicatas e somar vendas
+        produtos_agrupados = produtos_une.groupby(['codigo', 'nome_produto']).agg({
+            'vendas_total': 'sum',
+            'preco_38_percent': 'first',
+            'nomesegmento': 'first'
+        }).reset_index()
+
+        # Ordenar por vendas e pegar o top N
+        top_produtos = produtos_agrupados.nlargest(limite, 'vendas_total')
+
+        # Preparar dados para gráfico
+        x_data = [produto['nome_produto'][:50] + '...' if len(produto['nome_produto']) > 50 else produto['nome_produto']
+                  for _, produto in top_produtos.iterrows()]
+        y_data = [float(produto['vendas_total']) for _, produto in top_produtos.iterrows()]
+
+        # Cores baseadas na performance
+        max_vendas = max(y_data) if y_data else 1
+        colors = []
+        for valor in y_data:
+            if valor >= max_vendas * 0.7:
+                colors.append('#2E8B57')  # Verde escuro para top performers
+            elif valor >= max_vendas * 0.3:
+                colors.append('#FFD700')  # Dourado para performance média
+            else:
+                colors.append('#CD5C5C')  # Vermelho suave para baixa performance
+
+        # Criar dados do gráfico
+        chart_data = {
+            "x": x_data,
+            "y": y_data,
+            "type": "bar",
+            "colors": colors,
+            "show_values": True,
+            "height": max(400, min(800, len(x_data) * 50)),
+            "margin": {"l": 80, "r": 80, "t": 100, "b": 120}
+        }
+
+        # Preparar lista de produtos para resultado
+        produtos_list = []
+        for _, produto in top_produtos.iterrows():
+            produtos_list.append({
+                "codigo": int(produto['codigo']),
+                "nome": produto['nome_produto'],
+                "vendas": float(produto['vendas_total']),
+                "preco": float(produto.get('preco_38_percent', 0)),
+                "segmento": produto.get('nomesegmento', 'N/A')
+            })
+
+        total_vendas = sum(y_data)
+
+        return {
+            "type": "chart",
+            "title": f"Top {limite} Produtos Mais Vendidos - UNE {une_nome}",
+            "result": {
+                "chart_data": chart_data,
+                "une_nome": une_nome,
+                "limite": limite,
+                "produtos": produtos_list,
+                "total_vendas": total_vendas,
+                "total_produtos_une": len(produtos_une)
+            },
+            "summary": f"Top {limite} produtos mais vendidos na UNE {une_nome}. Total de vendas: {total_vendas:,.0f} unidades.",
             "tokens_used": 0
         }
 
