@@ -711,27 +711,21 @@ def create_simple_chart(result: Dict[str, Any]):
         )
         st.plotly_chart(fig, use_container_width=True)
 
-# Controle de sessão
-if 'selected_query' not in st.session_state:
-    st.session_state.selected_query = ''
-
-if 'admin_logged_in' not in st.session_state:
-    st.session_state.admin_logged_in = False
-
-# Footer limpo para clientes
-if check_admin_login():
-    st.markdown("---")
-    st.markdown("""
-    <div style="text-align: center; color: #64748b; font-size: 0.9rem;">
-        🚀 Agent_BI Otimizado - Economia Máxima de LLM |
-        💰 Zero tokens para consultas básicas |
-        ⚡ Cache inteligente ativo
-    </div>
-    """, unsafe_allow_html=True)
-
-if __name__ == "__main__":
-    main()
-  )
+    elif result_type == 'evolucao_vendas_produto':
+        # Gráfico de linha para evolução de vendas
+        timeseries_data = result_data.get('vendas_timeseries', [])
+        if timeseries_data:
+            df_chart = pd.DataFrame(timeseries_data)
+            df_chart['date'] = pd.to_datetime(df_chart['date'])
+            
+            fig = px.line(
+                df_chart, 
+                x='date', 
+                y='vendas', 
+                title=f"Evolução de Vendas - {result_data.get('produto_nome', '')}",
+                labels={'date': 'Mês', 'vendas': 'Vendas'},
+                markers=True
+            )
             fig.update_layout(height=450)
             st.plotly_chart(fig, use_container_width=True)
 
@@ -754,6 +748,4 @@ if check_admin_login():
     """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
-    main()
-:
     main()
